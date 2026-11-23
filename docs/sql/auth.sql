@@ -1,8 +1,12 @@
 create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists sl_plans (plan text primary key, daily_messages int not null, max_docs int not null);
-insert into sl_plans values ('free', 20, 0), ('pro', 300, 30)
-  on conflict (plan) do update set daily_messages = excluded.daily_messages, max_docs = excluded.max_docs;
+-- the admin edits the limits from the dashboard, so re-running this file must not reset them
+insert into sl_plans (plan, daily_messages, max_docs) values ('free', 6, 10), ('pro', 300, 30)
+  on conflict (plan) do nothing;
+alter table sl_plans add column if not exists daily_maps int not null default 1;
+alter table sl_plans add column if not exists daily_timelines int not null default 1;
+alter table sl_plans add column if not exists daily_uploads int not null default 1;
 
 create table if not exists sl_users (
   id uuid primary key default gen_random_uuid(),
@@ -24,12 +28,36 @@ create table if not exists sl_usage (
   messages int not null default 0,
   primary key (user_id, day)
 );
+-- per-user overrides set by the admin, e.g. {"daily_messages": 50, "daily_uploads": 3}; missing keys use the plan
+alter table sl_users add column if not exists limits jsonb not null default '{}'::jsonb;
+alter table sl_users add column if not exists disabled boolean not null default false;
+alter table sl_users add column if not exists created_by uuid;
 alter table sl_plans enable row level security;
 alter table sl_users enable row level security;
 alter table sl_sessions enable row level security;
 alter table sl_usage enable row level security;
 
--- user profile + today's usage, or null
+-- per-day counters of the other features (map, timeline, upload)
+create table if not exists sl_feature_usage (
+  user_id uuid not null references sl_users(id) on delete cascade,
+  day date not null,
+  feature text not null,
+  n int not null default 0,
+  primary key (user_id, day, feature)
+);
+alter table sl_feature_usage enable row level security;
+
+-- effective limits of one user: plan limits, overridden by sl_users.limits; admins are unlimited
+create or replace function sl_limits(p_user uuid) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select case when u.role = 'admin'
+    then jsonb_build_object('daily_messages', 100000, 'daily_maps', 100000, 'daily_timelines', 100000, 'daily_uploads', 100000, 'max_docs', 100000)
+    else jsonb_build_object('daily_messages', p.daily_messages, 'daily_maps', p.daily_maps, 'daily_timelines', p.daily_timelines,
+                            'daily_uploads', p.daily_uploads, 'max_docs', p.max_docs) || coalesce(u.limits, '{}'::jsonb) end
+  from sl_users u join sl_plans p on p.plan = u.plan where u.id = p_user
+$$;
+
+-- user profile + today's usage, or null (also null for a disabled account)
 create or replace function sl_user_json(p_token text) returns jsonb
 language sql security definer set search_path = public, extensions as $$
   select jsonb_build_object(
@@ -37,11 +65,14 @@ language sql security definer set search_path = public, extensions as $$
     'user', jsonb_build_object('id', u.id, 'email', u.email, 'name', u.full_name, 'plan', u.plan, 'role', u.role),
     'usage', jsonb_build_object(
       'used', coalesce((select messages from sl_usage where user_id = u.id and day = (now() at time zone 'Africa/Cairo')::date), 0),
-      'limit', case when u.role = 'admin' then 100000 else p.daily_messages end,
-      'max_docs', case when u.role = 'admin' then 100000 else p.max_docs end,
+      'limit', (l->>'daily_messages')::int,
+      'max_docs', (l->>'max_docs')::int,
+      'limits', l,
+      'uploads_today', coalesce((select n from sl_feature_usage where user_id = u.id and day = (now() at time zone 'Africa/Cairo')::date and feature = 'upload'), 0),
       'docs', (select count(distinct metadata->>'fileName') from documents where metadata->>'userId' = u.id::text)))
-  from sl_sessions s join sl_users u on u.id = s.user_id join sl_plans p on p.plan = u.plan
-  where s.token = p_token and s.expires_at > now()
+  from sl_sessions s join sl_users u on u.id = s.user_id
+       cross join lateral sl_limits(u.id) l
+  where s.token = p_token and s.expires_at > now() and not u.disabled
 $$;
 
 create or replace function sl_new_session(p_user uuid) returns text
@@ -78,6 +109,7 @@ begin
     if u.id is null or u.password_hash <> crypt(v_pass, u.password_hash) then
       return jsonb_build_object('ok', false, 'error', 'الإيميل أو الباسورد غلط');
     end if;
+    if u.disabled then return jsonb_build_object('ok', false, 'error', 'الحساب ده موقوف. تواصل مع الإدارة.'); end if;
     t := sl_new_session(u.id);
     return sl_user_json(t) || jsonb_build_object('token', t);
   elsif p_action = 'me' then
@@ -88,6 +120,11 @@ begin
     j := sl_user_json(v_token);
     if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
     return sl_api_ext(p_action, p, j);                         -- history_maps.sql
+  elsif p_action like 'admin\_%' then
+    j := sl_user_json(v_token);
+    if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
+    if j->'user'->>'role' <> 'admin' then return jsonb_build_object('ok', false, 'error', 'forbidden'); end if;
+    return sl_admin(p_action, p, j);                           -- admin.sql
   elsif p_action = 'logout' then
     delete from sl_sessions where token = v_token;
     return jsonb_build_object('ok', true);
@@ -137,12 +174,30 @@ begin
     if j->'user'->>'role' <> 'admin' then return jsonb_build_object('ok', false, 'error', 'الرفع للمكتبة العامة للأدمن بس.'); end if;
     return jsonb_build_object('ok', true, 'owner_id', 'public');
   end if;
-  if (j->'usage'->>'max_docs')::int = 0 then return jsonb_build_object('ok', false, 'error', 'رفع المستندات الخاصة متاح في Pro بس.'); end if;
-  if (j->'usage'->>'docs')::int >= (j->'usage'->>'max_docs')::int then return jsonb_build_object('ok', false, 'error', 'وصلت للحد الأقصى لعدد المستندات.'); end if;
+  if (j->'usage'->>'max_docs')::int = 0 then
+    perform sl_upload_log(j, 'upload_denied', 'disabled');
+    return jsonb_build_object('ok', false, 'error', 'رفع المستندات مش متاح لحسابك.');
+  end if;
+  if (j->'usage'->>'docs')::int >= (j->'usage'->>'max_docs')::int then
+    perform sl_upload_log(j, 'upload_denied', 'max_docs');
+    return jsonb_build_object('ok', false, 'error', 'وصلت للحد الأقصى لعدد المستندات (' || (j->'usage'->>'max_docs') || ').');
+  end if;
+  if (j->'usage'->>'uploads_today')::int >= (j->'usage'->'limits'->>'daily_uploads')::int then
+    perform sl_upload_log(j, 'upload_denied', 'daily');
+    return jsonb_build_object('ok', false, 'error',
+      'خلص رفع المستندات النهارده (' || (j->'usage'->'limits'->>'daily_uploads') || ').'
+      || case when j->'user'->>'plan' = 'free' then ' ارجع بكرة أو اشترك في Pro.' else ' ارجع بكرة.' end);
+  end if;
+  insert into sl_feature_usage (user_id, day, feature, n) values ((j->'user'->>'id')::uuid, (now() at time zone 'Africa/Cairo')::date, 'upload', 1)
+    on conflict (user_id, day, feature) do update set n = sl_feature_usage.n + 1;
+  perform sl_upload_log(j, 'upload', null);
   return jsonb_build_object('ok', true, 'owner_id', j->'user'->>'id');
 end $$;
 
-revoke all on function sl_api(text, jsonb), sl_consume(text), sl_can_upload(text, text), sl_user_json(text), sl_new_session(uuid) from public, anon, authenticated;
+
+
+revoke all on function sl_api(text, jsonb), sl_consume(text), sl_can_upload(text, text), sl_user_json(text), sl_new_session(uuid),
+  sl_limits(uuid) from public, anon, authenticated;
 
 -- remove the fake test law used in the earlier end-to-end test
 delete from documents where metadata->>'userId' = 'usr-claude-e2e';

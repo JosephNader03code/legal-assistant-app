@@ -92,7 +92,12 @@ begin
   select id into orm from sl_models where provider = 'openrouter' and active order by quality desc limit 1;
   return jsonb_build_object('gemini', chosen, 'lite', lite,
                             'openrouter', coalesce(orm, 'nvidia/nemotron-3-ultra-550b-a55b:free'),
-                            'complexity', cx, 'reason', why);
+                            'complexity', cx, 'reason', why,
+                            -- llm_router.sql: [primary, fallback] for the agents, reserved against each model's per-minute quota
+                            'wait', sl_llm_wait('main', case when p_plan = 'pro' then 8000 else 6500 end),  -- before the pick reserves
+                            'llm', jsonb_build_object(
+                              'main',  sl_llm_pick('main',  case when p_plan = 'pro' then 8000 else 6500 end),
+                              'light', sl_llm_pick('light', case when p_plan = 'pro' then 5000 else 1500 end)));
 end $$;
 
 -- ============ Semantic answer cache (free tier) ============

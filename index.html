@@ -141,6 +141,24 @@ input,textarea{font:inherit;color:inherit}
 .modal h3{margin:0 0 6px;font-size:20px}
 .modal ul{padding-right:20px;color:var(--ink2)}
 
+/* clarifying questions */
+.clar{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 16px;margin-top:4px}
+.clar .cq{margin:0 0 14px}
+.clar .cq:last-of-type{margin-bottom:10px}
+.clar .cq b{display:block;font-weight:500;font-size:14.5px;margin-bottom:7px}
+.clar .cq b span{color:var(--mute);font-weight:600;margin-inline-end:4px}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{border:1px solid var(--line);background:var(--bg);color:var(--ink2);border-radius:999px;padding:5px 13px;font-size:13.5px;transition:all .15s}
+.opt:hover{border-color:var(--brand)}
+.opt.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.cin{width:100%;margin-top:7px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);outline:none;font-size:14px}
+.cin:focus{border-color:var(--brand)}
+.clar-act{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:4px}
+.clar-act .btn{padding:9px 16px;font-size:14px}
+.linkbtn{border:0;background:transparent;color:var(--mute);font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:4px}
+.linkbtn:hover{color:var(--ink2)}
+.clar.done{opacity:.6;pointer-events:none}
+
 /* history drawer */
 .drawer.right{left:auto;right:0}
 .sess{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:border .15s}
@@ -176,6 +194,7 @@ input,textarea{font:inherit;color:inherit}
 .tl-d{display:inline-block;font-size:12px;font-weight:600;color:var(--k);background:color-mix(in srgb,var(--k) 12%,transparent);border-radius:999px;padding:1px 10px;margin-bottom:3px}
 .tl-k{font-size:11px;color:var(--mute);margin-inline-start:6px}
 .tl-e{font-size:14.5px}
+.tl-n{font-size:12.5px;color:var(--mute);margin-top:1px}
 .mfull{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column}
 .mfull header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
 .mfull .mview{max-height:none;flex:1}
@@ -247,12 +266,13 @@ input,textarea{font:inherit;color:inherit}
   <div class="composer-wrap">
     <div class="composer">
       <textarea id="q" rows="1" placeholder="اكتب سؤالك هنا..."></textarea>
-      <button class="icon-btn" id="mapBtn" title="خريطة ذهنية وخط زمني للقضية">🗺️</button>
+      <button class="icon-btn" id="mapBtn" title="خريطة ذهنية للقضية">🧠</button>
+      <button class="icon-btn" id="tlBtn" title="خط زمني للقضية">🕒</button>
       <button class="send" id="send" title="إرسال" disabled>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
       </button>
     </div>
-    <div class="hint">الإجابات للاسترشاد ومش بديل عن محامي. · 🗺️ <span id="mapsLeft">خريطة ذهنية وخط زمني للقضية</span></div>
+    <div class="hint">الإجابات للاسترشاد ومش بديل عن محامي. <span id="mapsLeft"></span></div>
   </div>
 </section>
 
@@ -347,7 +367,7 @@ function applyMe(r) {
   $('upgradeMenu').classList.toggle('hidden', pro);
   $('publicWrap').classList.toggle('hidden', u.role !== 'admin');
   setUsage(r.usage.used, r.usage.limit);
-  if (r.usage.maps) setMaps(r.usage.maps.limit - r.usage.maps.used);
+  if (r.usage.maps && typeof r.usage.maps.map === 'number') { setMaps('mindmap', r.usage.maps.limit - r.usage.maps.map); setMaps('timeline', r.usage.maps.limit - r.usage.maps.timeline); }
   $('hello').textContent = 'أهلاً' + (u.name ? ' ' + u.name.split(' ')[0] : '') + ' 👋';
   $('helloSub').textContent = pro ? 'اسأل سؤالك القانوني أو في ملفات قضاياك' : 'اسأل أي سؤال قانوني بالعامية، وهرد عليك ببساطة';
   const chips = pro
@@ -360,10 +380,15 @@ function setUsage(used, limit) {
   $('usageTxt').textContent = used + ' / ' + limit + ' النهارده';
   $('usageBar').style.width = Math.min(100, used / limit * 100) + '%';
 }
-function setMaps(left) {
+const mapsLeft = { mindmap: null, timeline: null };
+const leftTxt = n => n > 0 ? 'فاضل ' + (n === 1 ? 'مرة' : n === 2 ? 'مرتين' : n + ' مرات') : 'خلصت النهارده';
+function setMaps(type, left) {
   if (!me || me.user.role === 'admin' || typeof left !== 'number') return;
-  me.mapsLeft = left;
-  $('mapsLeft').textContent = left > 0 ? 'فاضل لك ' + left + (left === 1 ? ' خريطة' : left === 2 ? ' خريطتين' : ' خرايط') + ' النهارده' : 'خلصت خرايط النهارده';
+  mapsLeft[type === 'timeline' ? 'timeline' : 'mindmap'] = left;
+  const parts = [];
+  if (mapsLeft.mindmap !== null) parts.push('🧠 خريطة ذهنية: ' + leftTxt(mapsLeft.mindmap));
+  if (mapsLeft.timeline !== null) parts.push('🕒 خط زمني: ' + leftTxt(mapsLeft.timeline));
+  $('mapsLeft').textContent = parts.length ? ' · ' + parts.join(' · ') : '';
 }
 function showApp() { $('authView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('q').focus(); }
 function showAuth() { $('appView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
@@ -382,7 +407,7 @@ $('newBtn').onclick = newChat; $('newBtn2').onclick = newChat; $('closeH').oncli
 const q = $('q');
 q.addEventListener('input', () => { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 180) + 'px'; $('send').disabled = !q.value.trim() || busy; });
 q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
-$('send').onclick = send;
+$('send').onclick = () => send();
 const scroll = () => { $('main').scrollTop = $('main').scrollHeight; };
 /* small safe markdown renderer: escape first, then format */
 function md(src) {
@@ -416,12 +441,15 @@ function addBot() {
 const STAGES_FREE = ['بيدوّر في القوانين', 'بيجهز الرد'];
 const STAGES_PRO = ['بيحلل السؤال', 'بيدوّر في القوانين وملفاتك', 'بيكتب الرأي القانوني', 'بيراجع الاستشهادات'];
 
-const MAP_RE = /(mind\s*-?\s*map|ماي?ند\s*ماب|خريط[ةه]\s*ذهني[ةه]|خط\s*(ال)?(زمني|زمنى|أحداث|احداث)|تايم\s*لاين|timeline|تسلسل\s*(ال)?(أحداث|احداث|زمني))/i;
-async function send() {
-  const text = q.value.trim(); if (!text || busy) return;
-  if (MAP_RE.test(text)) return sendMap(text);
-  busy = true; q.value = ''; q.style.height = 'auto'; $('send').disabled = true; $('welcome').classList.add('hidden');
-  addUser(text);
+const MINDMAP_RE = /(mind\s*-?\s*map|ماي?ند\s*ماب|خريط[ةه]\s*ذهني[ةه])/i;
+const TIMELINE_RE = /(خط\s*(ال)?(زمني|زمنى|أحداث|احداث)|تايم\s*لاين|time\s*line|تسلسل\s*(ال)?(أحداث|احداث|زمني))/i;
+/* opts: {text, display, noClarify} for answers to the clarifying questions */
+async function send(opts = {}) {
+  const typed = !opts.text, text = (opts.text || q.value).trim(); if (!text || busy) return;
+  if (typed && MINDMAP_RE.test(text)) return sendMap(text, 'mindmap');
+  if (typed && TIMELINE_RE.test(text)) return sendMap(text, 'timeline');
+  busy = true; if (typed) { q.value = ''; q.style.height = 'auto'; } $('send').disabled = true; $('welcome').classList.add('hidden');
+  addUser(opts.display || text);
   const bot = addBot(), body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
   const pro = me && (me.user.plan === 'pro' || me.user.role === 'admin');
   const stages = pro ? STAGES_PRO : STAGES_FREE; let si = 0;
@@ -429,11 +457,16 @@ async function send() {
   const timer = setInterval(() => { si = Math.min(si + 1, stages.length - 1); const s = bot.querySelector('#stage'); if (s) s.textContent = stages[si]; }, pro ? 5000 : 3500);
   const t0 = performance.now();
   try {
-    const r = await fetch(API.base + '/Chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: text, sessionId: session, token }) });
+    const r = await fetch(API.base + '/Chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: text, sessionId: session, token, noClarify: !!opts.noClarify }) });
     let data = await r.json(); if (Array.isArray(data)) data = data[0];
     if (data.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
-    body.innerHTML = md(data.output || 'مفيش رد.');
     historyDirty = true;
+    if (data.clarify && Array.isArray(data.questions) && data.questions.length) {
+      renderClarify(bot, text, data);
+      if (typeof data.remaining === 'number' && me) setUsage(me.usage.limit - data.remaining, me.usage.limit);
+      return;
+    }
+    body.innerHTML = md(data.output || 'مفيش رد.');
     if (data.error === 'quota') { body.classList.add('err'); }
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
     const tags = [];
@@ -492,6 +525,47 @@ async function upload(f) {
 async function refreshMe() { try { const r = await api('me'); if (r.ok) applyMe(r); } catch (e) {} }
 
 
+
+
+/* ---------- clarifying questions (asked before the first answer) ---------- */
+function renderClarify(bot, question, data) {
+  const body = bot.querySelector('.md'); body.innerHTML = '';
+  const intro = document.createElement('p'); intro.textContent = data.intro || 'محتاج أعرف كام حاجة الأول:'; body.appendChild(intro);
+  const box = document.createElement('div'); box.className = 'clar';
+  const answers = data.questions.map(() => '');
+  data.questions.forEach((x, i) => {
+    const cq = document.createElement('div'); cq.className = 'cq';
+    cq.innerHTML = '<b><span>' + (i + 1) + '.</span></b>'; cq.querySelector('b').append(x.q);
+    const input = document.createElement('input'); input.className = 'cin'; input.placeholder = x.options && x.options.length ? 'أو اكتب إجابة تانية...' : 'اكتب إجابتك...';
+    if (x.options && x.options.length) {
+      const opts = document.createElement('div'); opts.className = 'opts';
+      x.options.forEach(o => {
+        const b = document.createElement('button'); b.className = 'opt'; b.type = 'button'; b.textContent = o;
+        b.onclick = () => { const on = !b.classList.contains('on'); opts.querySelectorAll('.opt').forEach(z => z.classList.remove('on')); b.classList.toggle('on', on); answers[i] = on ? o : ''; if (on) input.value = ''; upd(); };
+        opts.appendChild(b);
+      });
+      cq.appendChild(opts);
+    }
+    input.oninput = () => { if (input.value.trim()) cq.querySelectorAll('.opt').forEach(z => z.classList.remove('on')); answers[i] = input.value.trim(); upd(); };
+    input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); } };
+    cq.appendChild(input); box.appendChild(cq);
+  });
+  const act = document.createElement('div'); act.className = 'clar-act';
+  const sendBtn = document.createElement('button'); sendBtn.className = 'btn'; sendBtn.textContent = 'ابعت الإجابات'; sendBtn.disabled = true;
+  const skip = document.createElement('button'); skip.className = 'linkbtn'; skip.textContent = 'جاوب على طول من غير أسئلة';
+  act.append(sendBtn, skip); box.appendChild(act); body.appendChild(box);
+  const upd = () => { sendBtn.disabled = !answers.some(Boolean); };
+  sendBtn.onclick = () => {
+    if (busy) return; box.classList.add('done');
+    const lines = data.questions.map((x, i) => '- ' + x.q + ' ' + (answers[i] || 'مش عارف'));
+    send({ text: 'سؤالي: ' + question + '\n\nإجاباتي على أسئلتك:\n' + lines.join('\n'), display: 'إجاباتي:\n' + data.questions.map((x, i) => (i + 1) + '. ' + (answers[i] || 'مش عارف')).join('\n') });
+  };
+  skip.onclick = () => {
+    if (busy) return; box.classList.add('done');
+    send({ text: 'سؤالي: ' + question + '\n\n(جاوب على طول بالمعلومات المتاحة، ووضّح الافتراضات اللي بنيت عليها الرد)', display: 'جاوب على طول', noClarify: true });
+  };
+  setTimeout(() => { const f = box.querySelector('.opt, .cin'); if (f && window.innerWidth > 640) f.focus({ preventScroll: true }); }, 50);
+}
 
 /* ---------- 👍 / 👎 on answers ---------- */
 const THUMB = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3zm0 0 4-8a3 3 0 0 1 3 3v4h5.5a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 18.1 21H7"/></svg>';
@@ -570,19 +644,21 @@ async function openSession(id) {
 }
 
 /* ---------- case mind map + timeline ---------- */
-$('mapBtn').onclick = () => sendMap(q.value.trim());
-async function sendMap(text) {
+$('mapBtn').onclick = () => sendMap(q.value.trim(), 'mindmap');
+$('tlBtn').onclick = () => sendMap(q.value.trim(), 'timeline');
+async function sendMap(text, type) {
   if (busy) return;
-  if (!text && !$('thread').querySelector('.msg')) { q.placeholder = 'اكتب وقائع القضية الأول، وبعدين دوس 🗺️'; q.focus(); return; }
+  const tl = type === 'timeline';
+  if (!text && !$('thread').querySelector('.msg')) { q.placeholder = 'اكتب وقائع القضية الأول، وبعدين دوس ' + (tl ? '🕒' : '🧠'); q.focus(); return; }
   busy = true; q.value = ''; q.style.height = 'auto'; $('send').disabled = true; $('welcome').classList.add('hidden');
   if (text) addUser(text);
   const bot = addBot(), body = bot.querySelector('.md');
-  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span>بيرسم الخريطة الذهنية والخط الزمني</span></div>';
+  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span>' + (tl ? 'بيرتب الخط الزمني للقضية' : 'بيرسم الخريطة الذهنية') + '</span></div>';
   try {
-    const r = await fetch(API.base + '/mindmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sessionId: session, text }) });
+    const r = await fetch(API.base + '/mindmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sessionId: session, text, type: tl ? 'timeline' : 'mindmap' }) });
     let d = await r.json(); if (Array.isArray(d)) d = d[0];
     if (d.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
-    if (typeof d.maps_left === 'number') setMaps(d.maps_left);
+    if (typeof d.maps_left === 'number') setMaps(type, d.maps_left);
     if (!d.ok || !d.map) {
       body.innerHTML = md(d.output || 'مقدرتش أعمل الخريطة.'); body.classList.add('err');
       if (d.error === 'quota' && me && me.user.plan === 'free') { const b = document.createElement('button'); b.className = 'btn ghost'; b.style.marginTop = '8px'; b.textContent = '✦ اعرف عن Pro'; b.onclick = openPro; body.appendChild(b); }
@@ -599,12 +675,14 @@ const KIND = { fact: ['واقعة', '#2563eb'], procedure: ['إجراء', '#9333
 function renderMap(bot, map) {
   const body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
   body.innerHTML = '';
+  if (map.type === 'timeline' || (!map.type && !map.mindmap)) return renderTimelineCard(bot, map);
   const card = document.createElement('div'); card.className = 'mapcard';
-  card.innerHTML = '<div class="mhead"><b></b><div class="mtabs"><button class="on" data-v="mm">🧠 الخريطة الذهنية</button><button data-v="tl">🕒 الخط الزمني</button></div></div>' +
+  const both = !map.type && (map.timeline || []).length;
+  card.innerHTML = '<div class="mhead"><b></b>' + (both ? '<div class="mtabs"><button class="on" data-v="mm">🧠 الخريطة الذهنية</button><button data-v="tl">🕒 الخط الزمني</button></div>' : '') + '</div>' +
     '<div class="mview" data-p="mm"></div><div class="mview hidden" data-p="tl"></div>' +
     '<div class="mactions"><button class="btn ghost" data-a="full">⤢ شاشة كاملة</button><button class="btn ghost" data-a="png">⬇ صورة PNG</button><button class="btn ghost" data-a="svg">⬇ SVG</button>' +
     '<span class="zoom"><button class="btn ghost" data-z="1.25" title="تكبير">＋</button><button class="btn ghost" data-z="0.8" title="تصغير">－</button><button class="btn ghost" data-z="fit" title="على قد الشاشة">⤓</button></span></div>';
-  card.querySelector('b').textContent = '🗺️ ' + (map.title || 'خريطة القضية');
+  card.querySelector('b').textContent = '🧠 ' + (map.title || 'خريطة القضية');
   const svg = mindmapSVG(map.mindmap || { label: map.title || '' });
   card.querySelector('[data-p="mm"]').appendChild(svg);
   card.querySelector('[data-p="tl"]').appendChild(timelineEl(map.timeline || []));
@@ -640,7 +718,31 @@ function renderMap(bot, map) {
   setZ(z);
   card.querySelectorAll('[data-z]').forEach(b => b.onclick = () => setZ(b.dataset.z === 'fit' ? fit() : z * +b.dataset.z));
   card.querySelectorAll('.mtabs button').forEach(b => b.addEventListener('click', () => card.querySelector('.zoom').classList.toggle('hidden', b.dataset.v !== 'mm')));
-  foot.innerHTML = '<span class="tag">' + (map.timeline || []).length + ' حدث في الخط الزمني</span>';
+  foot.innerHTML = '<span class="tag">خريطة ذهنية</span>';
+}
+function renderTimelineCard(bot, map) {
+  const body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
+  const card = document.createElement('div'); card.className = 'mapcard';
+  card.innerHTML = '<div class="mhead"><b></b></div><div class="mview"></div><div class="mactions"><button class="btn ghost" data-a="copy">⧉ نسخ كنص</button><button class="btn ghost" data-a="print">🖨 طباعة</button></div>';
+  card.querySelector('b').textContent = '🕒 ' + (map.title || 'الخط الزمني للقضية');
+  card.querySelector('.mview').appendChild(timelineEl(map.timeline || []));
+  if (map.missing && map.missing.length) {
+    const m = document.createElement('div'); m.className = 'missing';
+    m.innerHTML = '<b>⚠️ تواريخ أو معلومات ناقصة:</b><ul></ul>';
+    map.missing.forEach(x => { const li = document.createElement('li'); li.textContent = x; m.querySelector('ul').appendChild(li); });
+    card.appendChild(m);
+  }
+  const asText = () => (map.title ? map.title + '\n\n' : '') + (map.timeline || []).map(t => '• ' + (t.date || 'غير محدد') + ' — ' + t.event + (t.note ? ' (' + t.note + ')' : '')).join('\n');
+  card.querySelector('[data-a="copy"]').onclick = async e => { try { await navigator.clipboard.writeText(asText()); e.target.textContent = '✓ اتنسخ'; } catch (err) {} };
+  card.querySelector('[data-a="print"]').onclick = () => {
+    const w = window.open('', '_blank'); if (!w) return;
+    w.document.write('<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title></title><style>body{font-family:system-ui,sans-serif;padding:24px;line-height:1.8}h2{margin-top:0}li{margin-bottom:8px}small{color:#666}</style></head><body><h2></h2><ol></ol></body></html>');
+    w.document.title = map.title || 'الخط الزمني'; w.document.querySelector('h2').textContent = map.title || 'الخط الزمني للقضية';
+    (map.timeline || []).forEach(t => { const li = w.document.createElement('li'); li.innerHTML = '<b></b> — <span></span> <small></small>'; li.querySelector('b').textContent = t.date || 'غير محدد'; li.querySelector('span').textContent = t.event; li.querySelector('small').textContent = t.note ? '(' + t.note + ')' : ''; w.document.querySelector('ol').appendChild(li); });
+    w.document.close(); w.focus(); w.print();
+  };
+  body.appendChild(card);
+  foot.innerHTML = '<span class="tag">' + (map.timeline || []).length + ' حدث</span>';
 }
 
 function timelineEl(items) {
@@ -649,7 +751,8 @@ function timelineEl(items) {
   items.forEach(t => {
     const k = KIND[t.kind] || KIND.fact;
     const el = document.createElement('div'); el.className = 'tl-i'; el.style.setProperty('--k', k[1]);
-    el.innerHTML = '<span class="tl-d"></span><span class="tl-k"></span><div class="tl-e"></div>';
+    el.innerHTML = '<span class="tl-d"></span><span class="tl-k"></span><div class="tl-e"></div>' + (t.note ? '<div class="tl-n"></div>' : '');
+    if (t.note) el.querySelector('.tl-n').textContent = t.note;
     el.querySelector('.tl-d').textContent = t.date || 'غير محدد';
     el.querySelector('.tl-k').textContent = k[0];
     el.querySelector('.tl-e').textContent = t.event;

@@ -98,22 +98,31 @@ begin
   return jsonb_build_object('ok', false, 'error', 'unknown action');
 end $$;
 
--- {used, limit} of today's maps, for the "me" action
+-- today's usage of each visual feature, for the "me" action: {limit, map, timeline}
+-- (the mind map and the timeline are separate features, each with its own daily_maps quota)
+drop function if exists sl_map_take(text, text, text);
+drop function if exists sl_map_refund(uuid);
+drop function if exists sl_map_finish(boolean, uuid, text, int, jsonb);
 create or replace function sl_maps_usage(j jsonb) returns jsonb
 language sql security definer set search_path = public as $$
   select jsonb_build_object(
-    'used', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
-                       and day = (now() at time zone 'Africa/Cairo')::date and feature = 'map'), 0),
     'limit', case when j->'user'->>'role' = 'admin' then 100000
-                  else (select daily_maps from sl_plans where plan = j->'user'->>'plan') end)
+                  else (select daily_maps from sl_plans where plan = j->'user'->>'plan') end,
+    'map', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
+                      and day = (now() at time zone 'Africa/Cairo')::date and feature = 'map'), 0),
+    'timeline', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
+                      and day = (now() at time zone 'Africa/Cairo')::date and feature = 'timeline'), 0))
 $$;
 
--- mind-map webhook: auth + daily map quota + gather the case context
-create or replace function sl_map_take(p_token text, p_session text, p_text text) returns jsonb
+-- visual webhook: auth + daily quota of the requested feature + gather the case context
+-- p_type: 'mindmap' (feature 'map') | 'timeline' (feature 'timeline')
+create or replace function sl_map_take(p_token text, p_session text, p_text text, p_type text) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare
   j jsonb := sl_user_json(p_token);
   d date := (now() at time zone 'Africa/Cairo')::date;
+  feat text := case when p_type = 'timeline' then 'timeline' else 'map' end;
+  what text := case when p_type = 'timeline' then 'الخط الزمني' else 'الخريطة الذهنية' end;
   uid uuid; used int; lim int; is_pro boolean;
   key text; chat text; docs text := ''; last_id int;
 begin
@@ -122,12 +131,12 @@ begin
   is_pro := j->'user'->>'plan' = 'pro' or j->'user'->>'role' = 'admin';
   lim := case when j->'user'->>'role' = 'admin' then 100000
               else (select daily_maps from sl_plans where plan = j->'user'->>'plan') end;
-  select coalesce(n, 0) into used from sl_feature_usage where user_id = uid and day = d and feature = 'map';
+  select coalesce(n, 0) into used from sl_feature_usage where user_id = uid and day = d and feature = feat;
   used := coalesce(used, 0);
   if used >= lim then
-    return jsonb_build_object('ok', false, 'error', 'quota', 'output',
-      case when is_pro then 'وصلت للحد اليومي للخرائط (' || lim || '). ارجع بكرة.'
-           else 'خلصت الخرائط المجانية بتاعة النهارده (' || case lim when 1 then 'مرة واحدة' when 2 then 'مرتين' else lim || ' مرات' end || '). ارجع بكرة أو اشترك في Pro.' end);
+    return jsonb_build_object('ok', false, 'error', 'quota', 'type', feat, 'output',
+      case when is_pro then 'وصلت للحد اليومي لـ' || what || ' (' || lim || ' مرات). ارجع بكرة.'
+           else 'خلص استخدامك المجاني لـ' || what || ' النهارده (' || case lim when 1 then 'مرة واحدة' when 2 then 'مرتين' else lim || ' مرات' end || '). ارجع بكرة أو اشترك في Pro.' end);
   end if;
 
   key := uid::text || ':' || left(regexp_replace(coalesce(p_session, ''), '[^A-Za-z0-9_-]', '', 'g'), 64);
@@ -144,12 +153,13 @@ begin
       from (select * from sl_doc_profiles where user_id = uid::text order by created_at desc limit 2) f;
   end if;
   if coalesce(trim(p_text), '') = '' and coalesce(chat, '') = '' and docs = '' then
-    return jsonb_build_object('ok', false, 'error', 'empty', 'output', 'اكتب وقائع القضية الأول (أو اسأل عنها في المحادثة) وبعدين اطلب الخريطة.');
+    return jsonb_build_object('ok', false, 'error', 'empty', 'type', feat, 'output', 'اكتب وقائع القضية الأول (أو اسأل عنها في المحادثة) وبعدين اطلب ' || what || '.');
   end if;
 
-  insert into sl_feature_usage (user_id, day, feature, n) values (uid, d, 'map', 1)
+  insert into sl_feature_usage (user_id, day, feature, n) values (uid, d, feat, 1)
     on conflict (user_id, day, feature) do update set n = sl_feature_usage.n + 1;
   return jsonb_build_object('ok', true, 'user_id', uid, 'session_key', key, 'after_msg_id', coalesce(last_id, 0),
+    'type', case when feat = 'timeline' then 'timeline' else 'mindmap' end,
     'plan', case when is_pro then 'pro' else 'free' end, 'maps_left', lim - used - 1,
     'context', left(
       case when coalesce(trim(p_text), '') <> '' then 'طلب/وقائع من المستخدم الآن:' || E'\n' || left(p_text, 4000) || E'\n\n' else '' end ||
@@ -164,22 +174,36 @@ language sql security definer set search_path = public as $$
 $$;
 
 -- a failed generation should not burn the user's quota
-create or replace function sl_map_refund(p_user uuid) returns void
+create or replace function sl_map_refund(p_user uuid, p_type text) returns void
 language sql security definer set search_path = public as $$
   update sl_feature_usage set n = greatest(n - 1, 0)
-   where user_id = p_user and day = (now() at time zone 'Africa/Cairo')::date and feature = 'map'
+   where user_id = p_user and day = (now() at time zone 'Africa/Cairo')::date
+     and feature = case when p_type = 'timeline' then 'timeline' else 'map' end
 $$;
 
--- called once per generation: save the map, or give the quota back when generation failed
-create or replace function sl_map_finish(p_ok boolean, p_user uuid, p_key text, p_after int, p_data jsonb) returns jsonb
+-- called once per generation: save the result, or give the quota back when generation failed
+create or replace function sl_map_finish(p_ok boolean, p_user uuid, p_key text, p_after int, p_data jsonb, p_type text) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
   if p_ok then return sl_map_save(p_user, p_key, p_after, p_data); end if;
-  perform sl_map_refund(p_user);
+  perform sl_map_refund(p_user, p_type);
   return jsonb_build_object('saved', false, 'refunded', true);
 end $$;
 
-revoke all on function sl_clean_msg(text), sl_maps_usage(jsonb), sl_api_ext(text, jsonb, jsonb), sl_map_take(text, text, text),
-  sl_map_save(uuid, text, int, jsonb), sl_map_refund(uuid),
-  sl_map_finish(boolean, uuid, text, int, jsonb) from public, anon, authenticated;
+-- a clarifying-questions turn does not count against the daily message quota
+create or replace function sl_unconsume(p_user uuid) returns void
+language sql security definer set search_path = public as $$
+  update sl_usage set messages = greatest(messages - 1, 0)
+   where user_id = p_user and day = (now() at time zone 'Africa/Cairo')::date
+$$;
+
+-- true when this chat already has turns (the clarifying step only runs on a chat's first message)
+create or replace function sl_has_history(p_key text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from n8n_chat_histories where session_id = p_key)
+$$;
+
+revoke all on function sl_clean_msg(text), sl_maps_usage(jsonb), sl_api_ext(text, jsonb, jsonb), sl_map_take(text, text, text, text),
+  sl_map_save(uuid, text, int, jsonb), sl_map_refund(uuid, text), sl_unconsume(uuid), sl_has_history(text),
+  sl_map_finish(boolean, uuid, text, int, jsonb, text) from public, anon, authenticated;
 select 'ok' as status;

@@ -66,7 +66,10 @@ Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶
 - **Allowed:**
   1. `Route Model` (`sl_route(plan, text)`)
   2. `Set User` sets chatInput, sessionId = `userId:sessionId`, userId, plan, remaining, gemini_model, gemini_lite, or_model, complexity.
-  3. `Is Pro?` sends the request down one of two paths.
+  3. **Clarifying questions** (first message of a chat only): `Clarify Gate` (`sl_has_history`) → `First Turn?` (skipped when the chat has history or the body has `noClarify: true`) → `Clarifier` (Groq `gpt-oss-120b`, intake agent, JSON `{ask, intro, questions:[{q, options[]}]}`, Egyptian dialect) → `Parse Clarify` → `Ask First?`
+     - **Ask:** `Save Clarify` writes the turn into `n8n_chat_histories` and gives the message back with `sl_unconsume` → `Respond Clarify` returns `{ok, clarify:true, intro, questions, output}`. The UI shows clickable options plus a free-text field, then sends `سؤالي: … إجاباتي على أسئلتك: …` as the next message. «جاوب على طول» sends `noClarify`.
+     - **No questions:** continues to `Is Pro?` (`Restore User` passes the `Set User` data through).
+  4. `Is Pro?` sends the request down one of two paths.
 
 **Free path:**
 1. `Embed Question`: Gemini `gemini-embedding-001`, 768 dimensions, called by HTTP.
@@ -89,11 +92,13 @@ Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶
 
 Response JSON: `{ok, output, plan, remaining, intent?, legal_area?, review?: pass|fixed|skipped|failed, answeredBy?, cached?, model?, complexity?}`.
 
-### Mind map flow (main workflow, group "Case mind map + timeline")
+### Mind map / timeline flow (main workflow, group "Case mind map + timeline")
 
-`Map Webhook` (path `mindmap`) → `Map Auth` (`sl_map_take(token, sessionId, text)`: auth, daily map quota, builds the context from the last 12 chat turns + the user's text + for Pro the 2 latest `sl_doc_profiles` summaries, max 12k chars) → `Map Allowed?` → `Map Builder` (Groq `gpt-oss-120b`, fallback OpenRouter; strict JSON) → `Map Parse` (sanitizes / limits size) → `Map Save` (`sl_map_finish`: saves to `sl_maps`, or refunds the quota when generation failed) → `Respond Map`.
+The mind map and the timeline are **two separate features** (body `type: 'mindmap' | 'timeline'`), each with its own daily quota (`sl_feature_usage.feature` = `map` / `timeline`).
 
-Response: `{ok, map: {request, title, mindmap: {label, children[]}, timeline: [{date, event, kind: fact|procedure|deadline|next}], missing[]}, maps_left}`. Quota: `sl_plans.daily_maps` (free 2 / pro 8 per day, Cairo time; admins unlimited). The UI draws the map as SVG itself (no library) and offers PNG/SVG download. Messages containing "mind map / خريطة ذهنية / خط زمني / تايم لاين" are routed here automatically.
+`Map Webhook` (path `mindmap`) → `Map Auth` (`sl_map_take(token, sessionId, text, type)`: auth, daily map quota, builds the context from the last 12 chat turns + the user's text + for Pro the 2 latest `sl_doc_profiles` summaries, max 12k chars) → `Map Allowed?` → `Map Prompt` (picks the system prompt for the type) → `Map Builder` (Groq `gpt-oss-120b`, fallback OpenRouter; strict JSON) → `Map Parse` (sanitizes / limits size; **drops any deadline duration that is not literally in the case material**, because the model invents them) → `Map Save` (`sl_map_finish`: saves to `sl_maps`, or refunds the quota when generation failed) → `Respond Map`.
+
+Response: `{ok, type, map: {type, request, title, mindmap?: {label, children[]}, timeline?: [{date, event, kind: fact|procedure|deadline|next, note}], missing[]}, map_id, maps_left}`. Quota: `sl_plans.daily_maps` per feature (free 2 / pro 8 per day each, Cairo time; admins unlimited). The UI draws the mind map as SVG itself (no library, PNG/SVG download) and the timeline as a list (copy as text, print). Buttons 🧠 and 🕒 in the composer; messages containing "mind map / خريطة ذهنية" or "خط زمني / تايم لاين" are routed automatically. Maps saved before the split contain both and are shown with tabs.
 
 ### Chat history
 
@@ -204,6 +209,10 @@ manshurat.org resets connections from the container.
 | Free | about 1.4 s (Groq), cache hit about 0.8 s |
 | Pro | 16–39 s (Groq hits its token-per-minute limit, then OpenRouter takes over) |
 | Case extraction (1 section) | about 30 s, in the background after the upload response |
+| Clarifying questions | about 2 s |
+| Mind map / timeline | about 3.5–7.5 s |
+
+**Known issue (Nov 23 2026):** Gemini embeddings (`gemini-embedding-001`) returned 429 during testing, so `law_library` / `my_documents` search failed and Pro fell back to OpenRouter / DeepSeek (60–180 s). Needs a paid Gemini key or another embedding provider.
 
 ## Open items / next steps
 

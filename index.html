@@ -205,6 +205,28 @@ input,textarea{font:inherit;color:inherit}
 .ptable input{width:110px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font:inherit;color:inherit;font-variant-numeric:tabular-nums}
 .logrow{display:flex;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line)}
 .logrow span:first-child{color:var(--mute);width:96px;flex:none;direction:ltr;text-align:right}
+.utabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 12px}
+.utabs button{border:0;background:transparent;padding:8px 12px;color:var(--ink2);font-weight:500;border-bottom:2px solid transparent;font-size:14px}
+.utabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+.uchat{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;font-size:14px}
+.uchat:hover{border-color:var(--brand)}
+.uchat .t{flex:1;min-width:0}
+.uchat .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uchat .t small{color:var(--mute);font-size:12px}
+.qmsg{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
+.qmsg.user{border-inline-start:3px solid var(--brand)}
+.qmsg.bot{background:var(--bg);font-size:13.5px}
+.qmsg .qh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute);margin-bottom:4px}
+.qmsg .qh .sp{flex:1}
+.qmsg .qt{white-space:pre-wrap;font-size:14px}
+.qmsg.bot .md{max-height:7.5em;overflow:hidden;position:relative}
+.qmsg.bot.open .md{max-height:none}
+.qmsg .more{border:0;background:transparent;color:var(--brand);font-size:12.5px;padding:2px 0}
+.qrate{display:inline-flex;gap:4px}
+.qrate button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font-size:12.5px;color:var(--ink2);transition:all .15s}
+.qrate button:hover{border-color:var(--brand)}
+.qrate button.on[data-r="1"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.qrate button.on[data-r="-1"]{background:var(--danger);border-color:var(--danger);color:#fff}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 18px;border-radius:10px;font-size:14px;z-index:60}
 
 /* clarifying questions */
@@ -404,7 +426,11 @@ input,textarea{font:inherit;color:inherit}
     <div class="sub-t">حدود خاصة بالمستخدم ده <span class="muted">(فاضي = حد الباقة)</span></div>
     <div class="form-grid" id="fLimits"></div>
     <button class="btn block" id="uSave" style="margin-top:16px">حفظ</button>
-    <div id="uActivity"></div>
+    <div id="uMore" class="hidden">
+      <nav class="utabs" id="uTabs"><button class="on" data-u="msgs">💬 رسايله</button><button data-u="log">🕒 آخر نشاط</button></nav>
+      <div id="uMsgs"></div>
+      <div id="uActivity" class="hidden"></div>
+    </div>
   </div>
 </aside>
 
@@ -694,6 +720,7 @@ function renderOverview(o) {
     tile('توكنز النهارده (تقديري)', fmt(a.tokens_est_today), 'كل الموديلات') +
     tile('تقييمات آخر 7 أيام', '👍 ' + fmt(a.likes_7d) + '&nbsp; 👎 ' + fmt(a.dislikes_7d), '') +
     tile('البحث في القوانين', o.search.gemini_ok ? 'بالمعنى ✓' : 'بالكلمات', o.search.gemini_ok ? 'Gemini شغال' : 'Gemini واقف لحد ' + new Date(o.search.down_until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (kwShare ? ' · ' + kwShare + '% من ردود النهارده' : ''), !o.search.gemini_ok) +
+    tile('أسئلة قيّمتها', '👍 ' + fmt(a.good_questions) + '&nbsp; 👎 ' + fmt(a.bad_questions), 'من صفحة كل مستخدم') +
     tile('مستخدمين جداد', fmt(us.new_today), fmt(us.new_7d) + ' في آخر 7 أيام') +
     '</div>';
   h += '<div class="panel"><h3>الرسايل في آخر 14 يوم</h3><div class="chart" id="admChart"></div></div>';
@@ -776,7 +803,7 @@ function renderUsers() {
       '<div class="num" data-l="رسايل النهارده">' + fmt(u.messages_today) + (unl ? '' : ' / ' + fmt(lim.daily_messages)) + (u.quota_hit_today ? ' <span title="وصل للحد">⛔</span>' : '') + '</div>' +
       '<div class="num" data-l="خرايط · زمني">🧠 ' + fmt(u.maps_today) + '&nbsp;&nbsp;🕒 ' + fmt(u.timelines_today) + '</div>' +
       '<div class="num" data-l="مستندات">' + fmt(u.docs) + (u.uploads_today ? ' <span class="muted">(+' + fmt(u.uploads_today) + ' النهارده)</span>' : '') + '</div>' +
-      '<div class="num" data-l="شاتات النهارده">' + fmt(u.chats_today) + '</div>' +
+      '<div class="num" data-l="شاتات النهارده">' + fmt(u.chats_today) + ' <span class="muted">(' + fmt(u.chats || 0) + ' كلها)</span></div>' +
       '<div class="muted" data-l="آخر نشاط">' + ago(u.last_active) + '</div></div>';
   }).join('') : '<div class="muted" style="padding:12px">مفيش مستخدمين بالفلتر ده.</div>');
   $('uList').querySelectorAll('.ucard[data-id]').forEach(el => el.onclick = () => openUser(adm.users.find(u => u.id === el.dataset.id)));
@@ -799,18 +826,78 @@ function openUser(u) {
     $('fLimits').innerHTML = LIMITS.map(([k, t]) => '<div><label>' + t + '</label><input type="number" min="0" inputmode="numeric" data-k="' + k + '" value="' + (ov[k] ?? '') + '" placeholder="' + (pl[k] ?? '') + ' (الباقة)"></div>').join('');
   };
   fill(); $('fPlan').onchange = fill;
-  $('uActivity').innerHTML = '';
+  $('uActivity').innerHTML = ''; $('uMsgs').innerHTML = '';
+  $('uMore').classList.toggle('hidden', isNew);
   $('udrawer').classList.remove('hidden'); $('scrim').classList.remove('hidden'); $('scrim').style.zIndex = 40;
-  if (!isNew) loadUserLog(u.id);
+  if (!isNew) { setUTab('msgs'); loadUserChats(u); loadUserLog(u.id); }
+}
+function setUTab(t) {
+  $('uTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === t));
+  $('uMsgs').classList.toggle('hidden', t !== 'msgs'); $('uActivity').classList.toggle('hidden', t !== 'log');
+}
+$('uTabs').querySelectorAll('button').forEach(b => b.onclick = () => setUTab(b.dataset.u));
+async function loadUserChats(u) {
+  const box = $('uMsgs');
+  box.innerHTML = '<div class="muted">بيحمّل الشاتات...</div>';
+  try {
+    const r = await api('admin_user_chats', { id: u.id }); if (!r.ok) throw new Error(r.error);
+    const chats = r.chats || [];
+    if (!chats.length) { box.innerHTML = '<div class="muted">مبعتش رسايل لسه.</div>'; return; }
+    box.innerHTML = '<div class="muted" style="margin-bottom:8px">' + fmt(chats.length) + ' شات · اختار شات تشوف أسئلته وتقيّمها</div>';
+    chats.forEach(c => {
+      const t = sidTime(c.id), el = document.createElement('div'); el.className = 'uchat';
+      el.innerHTML = '<div class="t"><b></b><small></small></div>';
+      el.querySelector('b').textContent = c.title || '(بدون عنوان)';
+      el.querySelector('small').textContent = [fmt(c.questions) + ' سؤال', t ? new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
+        c.good ? '👍 ' + fmt(c.good) : '', c.bad ? '👎 ' + fmt(c.bad) : ''].filter(Boolean).join(' · ');
+      el.onclick = () => loadUserMessages(u, c);
+      box.appendChild(el);
+    });
+  } catch (e) { box.innerHTML = '<div class="err">مقدرتش أحمّل الشاتات.</div>'; }
+}
+async function loadUserMessages(u, c) {
+  const box = $('uMsgs');
+  box.innerHTML = '<div class="muted">بيحمّل الرسايل...</div>';
+  try {
+    const r = await api('admin_user_messages', { id: u.id, session: c.id }); if (!r.ok) throw new Error(r.error);
+    box.innerHTML = '';
+    const back = document.createElement('button'); back.className = 'btn ghost'; back.textContent = '→ كل الشاتات'; back.style.marginBottom = '10px';
+    back.onclick = () => loadUserChats(u); box.appendChild(back);
+    const head = document.createElement('div'); head.className = 'sub-t'; head.style.marginTop = '0'; head.textContent = c.title || ''; box.appendChild(head);
+    let n = 0;
+    (r.messages || []).forEach(m => {
+      const el = document.createElement('div'); el.className = 'qmsg ' + m.role;
+      if (m.role === 'user') {
+        n++;
+        el.innerHTML = '<div class="qh"><b>سؤال ' + n + '</b><span class="sp"></span><span class="qrate"><button data-r="1">👍 سؤال كويس</button><button data-r="-1">👎 مش مفيد</button></span></div><div class="qt"></div>';
+        el.querySelector('.qt').textContent = m.text;
+        let cur = m.review || 0;
+        const paint = () => el.querySelectorAll('.qrate button').forEach(b => b.classList.toggle('on', +b.dataset.r === cur));
+        el.querySelectorAll('.qrate button').forEach(b => b.onclick = async () => {
+          const prev = cur; cur = cur === +b.dataset.r ? 0 : +b.dataset.r; paint();
+          try { const x = await api('admin_rate_question', { msg_id: m.msg_id, rating: cur }); if (!x.ok) throw new Error(x.error); }
+          catch (e) { cur = prev; paint(); toast('✕ ' + e.message); }
+        });
+        paint();
+      } else {
+        el.innerHTML = '<div class="qh"><span>رد المساعد</span><span class="sp"></span>' + (m.user_rating === 1 ? '<span title="تقييم المستخدم">المستخدم: 👍</span>' : m.user_rating === -1 ? '<span title="تقييم المستخدم">المستخدم: 👎</span>' : '') + '</div><div class="md"></div><button class="more">عرض الرد كله</button>';
+        el.querySelector('.md').innerHTML = md(m.text);
+        el.querySelector('.more').onclick = e => { el.classList.toggle('open'); e.target.textContent = el.classList.contains('open') ? 'إخفاء' : 'عرض الرد كله'; };
+      }
+      box.appendChild(el);
+      if (m.role !== 'user') { const mdEl = el.querySelector('.md'); if (mdEl.scrollHeight <= mdEl.clientHeight + 2) el.querySelector('.more').remove(); }
+    });
+    if (!n) box.insertAdjacentHTML('beforeend', '<div class="muted">مفيش أسئلة في الشات ده.</div>');
+  } catch (e) { box.innerHTML = '<div class="err">مقدرتش أحمّل الرسايل.</div>'; }
 }
 $('uClose').onclick = () => { $('udrawer').classList.add('hidden'); $('scrim').classList.add('hidden'); $('scrim').style.zIndex = ''; };
 const KIND_AR = { free: 'رد', pro: 'رد Pro', cached: 'رد من الكاش', clarify: 'أسئلة قبل الرد', mindmap: 'خريطة ذهنية', timeline: 'خط زمني', denied_quota: '⛔ وصل للحد', denied_unauth: 'غير مسجل', upload: '📄 رفع مستند', upload_denied: '⛔ رفع مرفوض', mindmap_denied: '⛔ خريطة مرفوضة', timeline_denied: '⛔ خط زمني مرفوض' };
 async function loadUserLog(id) {
-  $('uActivity').innerHTML = '<div class="sub-t">آخر نشاط</div><div class="muted">بيحمّل...</div>';
+  $('uActivity').innerHTML = '<div class="muted">بيحمّل...</div>';
   try {
     const r = await api('admin_user_log', { id });
     const rows = r.log || [];
-    $('uActivity').innerHTML = '<div class="sub-t">آخر نشاط</div>' + (rows.length ? rows.map(x => '<div class="logrow"><span>' + new Date(x.at).toLocaleString('en-GB', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</span><span>' +
+    $('uActivity').innerHTML = (rows.length ? rows.map(x => '<div class="logrow"><span>' + new Date(x.at).toLocaleString('en-GB', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</span><span>' +
       esc(KIND_AR[x.kind] || x.kind) + (x.msg_no != null && x.kind !== 'upload' ? ' · رسالة ' + fmt(x.msg_no) + (x.msg_limit < 100000 ? '/' + fmt(x.msg_limit) : '') : '') +
       (x.seconds ? ' · ' + x.seconds + 'ث' : '') + (x.tokens ? ' · ' + fmt(x.tokens) + ' توكن' : '') + (x.error ? ' · <span class="err">' + esc(x.error) + '</span>' : '') + '</span></div>').join('') : '<div class="muted">مفيش نشاط متسجل لسه.</div>');
   } catch (e) { $('uActivity').innerHTML = ''; }

@@ -23,7 +23,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/case_files.sql`: case-file extraction storage and the agent tools (`sl_case_facts`, `sl_read_doc`, `sl_keyword_search`).
 - `docs/sql/feedback.sql`: 👍/👎 votes in `sl_feedback` (question, answer, rating, plan), one vote per answer (md5). Doubles as the future fine-tuning dataset: `select question, answer from sl_feedback where rating = 1 and kind = 'chat'`.
 - `docs/sql/llm_router.sql`: model chain (`sl_llm`, `sl_llm_calls`, `sl_llm_pick`, `sl_llm_wait`, `sl_llm_fail`, `sl_llm_status`).
-- `docs/sql/admin.sql`: admin dashboard API (`sl_admin`: admin_overview / admin_users / admin_user_log / admin_create_user / admin_update_user / admin_update_plans), `sl_clean_limits`.
+- `docs/sql/admin.sql`: admin dashboard API (`sl_admin`: admin_overview / admin_users / admin_user_log / admin_user_chats / admin_user_messages / admin_rate_question / admin_create_user / admin_update_user / admin_update_plans), `sl_clean_limits`, and `sl_question_review` (the admin's 👍 good question / 👎 not useful on users' questions, text copied; another labelled dataset).
 - `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
 - `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
@@ -173,7 +173,7 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 - **`sl_cache`**: vector(768) HNSW. `sl_settings` holds cache_threshold 0.92 and cache_ttl_days 7.
 - **`sl_doc_profiles`**: user_id, file_name, full_text, profile jsonb, summary, status.
 - RLS is enabled on all `sl_*` tables with no policies. Only the n8n Postgres role (which bypasses RLS) uses them. The functions are `security definer`, with execute revoked from anon and authenticated.
-- Users, plans and limits are managed from the **admin dashboard** in the web app (avatar menu → 📊 لوحة التحكم, admins only): overview tiles + 14-day chart, users list with today's activity and filters, create user, edit plan / role / limits / disable / reset password, per-user activity log, plan limits editor.
+- Users, plans and limits are managed from the **admin dashboard** in the web app (avatar menu → 📊 لوحة التحكم, admins only): overview tiles + 14-day chart, users list with today's activity and filters, create user, edit plan / role / limits / disable / reset password, the user's chats and messages (rate each question 👍/👎), per-user activity log, plan limits editor.
 - Free users can upload too now (daily_uploads); the Free Agent has the `my_documents` tool. Uploads are counted in `sl_feature_usage` (feature `upload`) and logged in `sl_request_log` (kind `upload` / `upload_denied`).
 
 ### Accounts

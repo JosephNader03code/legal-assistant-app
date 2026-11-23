@@ -22,6 +22,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/routing_cache.sql`: model routing (`sl_route`, `sl_take`, `sl_lite`) and the semantic cache (`sl_cache_get` / `sl_cache_put`).
 - `docs/sql/case_files.sql`: case-file extraction storage and the agent tools (`sl_case_facts`, `sl_read_doc`, `sl_keyword_search`).
 - `docs/sql/feedback.sql`: 👍/👎 votes in `sl_feedback` (question, answer, rating, plan), one vote per answer (md5). Doubles as the future fine-tuning dataset: `select question, answer from sl_feedback where rating = 1 and kind = 'chat'`.
+- `docs/sql/llm_router.sql`: model chain (`sl_llm`, `sl_llm_calls`, `sl_llm_pick`, `sl_llm_wait`, `sl_llm_fail`, `sl_llm_status`).
 - `docs/sql/admin.sql`: admin dashboard API (`sl_admin`: admin_overview / admin_users / admin_user_log / admin_create_user / admin_update_user / admin_update_plans), `sl_clean_limits`.
 - `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
 - `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
@@ -142,23 +143,19 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
    5. `Merge Facts`: deterministic code merge, so nothing gets dropped.
    6. `Case Summary` (LLM) → `Save Profile` into `sl_doc_profiles`.
 
-### Models (current)
+### Models (current): a chain, picked per turn
 
-| Agent | Primary | Fallback |
-|---|---|---|
-| Free Agent | Groq `openai/gpt-oss-120b` | Groq `openai/gpt-oss-20b` (OpenRouter free was exhausted daily) |
-| Clarifier (intake questions) | Groq `openai/gpt-oss-20b` (few-shot for dialect) | OpenRouter |
-| Triage | Groq `openai/gpt-oss-20b` | OpenRouter |
-| Expert (AI Agent) | Groq `openai/gpt-oss-120b` | OpenRouter |
-| QA Reviewer | OpenRouter | Groq `gpt-oss-20b` |
-| Case Extractor / Summary | Gemini flash-lite (`$('Save Full Text').first().json.lite`) | OpenRouter |
-| Backup AI Agent | Alibaba DeepSeek via n8n gateway credits | — |
+`sl_route` returns `llm: {main: [primary, fallback], light: [primary, fallback]}` and `wait` (seconds). The Groq model nodes take their model from it:
+- `LLM Main` / `LLM Main Fallback` → Free Agent and Expert (AI Agent). `LLM Light` / `LLM Light Fallback` → Triage, Clarifier (and QA fallback). `Groq Map Model` / `Map Model Fallback` → maps (picked in `sl_map_take`).
+- Chains (`sl_llm`, edit with SQL): main = `gpt-oss-120b` → `qwen/qwen3.8-27b` → `gpt-oss-20b`; light = `gpt-oss-20b` → `qwen3.8-27b` → `allam-2-7b` (Arabic, 4k context, no tools).
+- `sl_llm_pick` takes the first models with room this minute (TPM) and today (TPD for gpt-oss = 200k), reserving the turn's estimated tokens (free 6.5k, pro 8k, light 1.5k/5k, map 4k).
+- When nothing has room, `Models Busy?` → `Wait For Capacity` (≤ 20 s, it holds an n8n concurrency slot) before answering.
+- Log nodes report rate-limited models; `sl_llm_fail` pauses them 65 s, or 30 min near the daily limit; a pause is never shortened.
+- `maxTokensToSample` is sized per role (free 1200, pro 2500, light 1000, map 2500) because **Groq counts max_tokens against the per-minute limit up front**; 4096 made every second call fail.
+- Search results are smaller for free (`*_lite` scope: 3 × 900 chars) and pro (4 × 1300); AI Agent maxIterations 8. Free Agent does not retry (retries caused 40+ calls per question).
+- QA Reviewer: OpenRouter, fallback `LLM Light`. Backup AI Agent: DeepSeek via n8n gateway credits. Case Extractor / Summary: Gemini flash-lite → OpenRouter.
 
-- The OpenRouter node's model is the expression `$('Set User').first().json.or_model`.
-- Groq free limits are **8k tokens per minute per model**. Pro RAG turns often exceed that and fall back to OpenRouter.
-- OpenRouter free allows about 50 requests a day without credits.
-- Gemini's free tier silently throttles: calls hang 10–500 s with no error. The n8n Gemini node has no timeout or retry setting, which is why Groq is primary.
-- `sl_route` and `sl_models` still do quota accounting and the Gemini circuit breaker (`models/quota-exhausted` makes Gemini return 404 instantly, so the fallback kicks in). Groq isn't in `sl_models` yet.
+**Measured limits (Groq free, Nov 2026):** gpt-oss-120b / 20b 8k TPM, 200k TPD, 1000 RPD; qwen3.8-27b 7k TPM; allam 6k TPM. One free answer ≈ 6.5k tokens (2–3 calls, each re-sending the earlier search results), so the free tier serves roughly **3 answers a minute and ~70–100 a day** across the chain. The admin dashboard shows the chain's health. More capacity: Groq Dev Tier, $10 OpenRouter credit, or another provider key (e.g. Cerebras free tier) added as a credential + chain entries.
 
 ### Database (Supabase, schema public)
 
@@ -235,7 +232,7 @@ manshurat.org resets connections from the container.
 | Clarifying questions | about 2 s |
 | Mind map / timeline | about 3.5–7.5 s |
 
-**Capacity (the real bottleneck):** Groq free = 8k tokens/min per model; one free answer ≈ 4–10k tokens, one Pro answer ≈ 50k. Under bursts the agents hit 429 on both Groq models and OpenRouter free (50 requests/day) is exhausted, so answers fail. Fix: Groq Dev Tier or $10 OpenRouter credit.
+**Capacity (the real bottleneck):** see "Models" above. A Pro answer needs ~40–50k tokens, more than one free Groq model allows per minute, so Pro mostly ends on the DeepSeek backup.
 
 **Known issue (Nov 23 2026, mitigated by the breaker):** Gemini embeddings (`gemini-embedding-001`) returned 429 during testing, so `law_library` / `my_documents` search failed and Pro fell back to OpenRouter / DeepSeek (60–180 s). Needs a paid Gemini key or another embedding provider.
 

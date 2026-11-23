@@ -74,6 +74,7 @@ begin
                                     'question', left(f.question, 200), 'answer', left(f.answer, 300)) x
             from sl_feedback f join sl_users us on us.id = f.user_id
            where f.rating = -1 order by f.created_at desc limit 5) t), '[]'::jsonb),
+      'llm', sl_llm_status(),
       'search', jsonb_build_object('gemini_ok', sl_embed_ok(),
                                    'down_until', (select value from sl_settings where key = 'embed_down_until')),
       'plans', (select jsonb_agg(to_jsonb(pl) order by pl.plan) from sl_plans pl));

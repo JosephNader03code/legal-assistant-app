@@ -158,6 +158,7 @@ begin
     on conflict (user_id, day, feature) do update set n = sl_feature_usage.n + 1;
   return jsonb_build_object('ok', true, 'user_id', uid, 'session_key', key, 'after_msg_id', coalesce(last_id, 0),
     'type', case when feat = 'timeline' then 'timeline' else 'mindmap' end,
+    'llm', sl_llm_pick('main', 4000),                          -- llm_router.sql
     'plan', case when is_pro then 'pro' else 'free' end, 'maps_left', lim - used - 1,
     'context', left(
       case when coalesce(trim(p_text), '') <> '' then 'طلب/وقائع من المستخدم الآن:' || E'\n' || left(p_text, 4000) || E'\n\n' else '' end ||

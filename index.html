@@ -707,9 +707,26 @@ function renderOverview(o) {
     '<div class="panel"><h3>آخر ردود اتعملها 👎</h3><div class="rowlist">' +
     (o.recent_dislikes.length ? o.recent_dislikes.map(x => '<div class="r" style="display:block"><div><b>' + esc(x.name) + '</b> <span class="muted">' + ago(x.at) + '</span></div><div class="muted">س: ' + esc(x.question || '—') + '</div></div>').join('') : '<div class="muted">مفيش تقييمات سلبية.</div>') +
     '</div></div></div>';
+  h += llmPanel(o.llm || []);
   $('admOv').innerHTML = h;
   $('admOv').querySelectorAll('[data-id]').forEach(el => el.onclick = () => openUser(adm.users.find(u => u.id === el.dataset.id)));
   barChart($('admChart'), o.series || []);
+}
+
+/* model chain health: order, up/paused, load this minute and today */
+function llmPanel(ms) {
+  if (!ms.length) return '';
+  const row = m => {
+    const pct = Math.min(100, m.tokens_min / Math.max(1, m.tpm) * 100);
+    const day = m.tpd ? ' · اليوم ' + fmt(m.tokens_day) + ' / ' + fmt(m.tpd) : ' · ' + fmt(m.calls_today) + ' طلب النهارده';
+    const state = !m.active ? '<span class="badge">متوقف</span>' : m.up ? '<span class="badge admin">شغال</span>'
+      : '<span class="badge off" title="' + esc(m.last_error || '') + '">واقف لحد ' + new Date(m.down_until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '</span>';
+    const chains = [m.rank_main ? 'الرد #' + m.rank_main : '', m.rank_light ? 'الفرز والأسئلة #' + m.rank_light : ''].filter(Boolean).join(' · ');
+    return '<div class="r"><span class="n"><b dir="ltr">' + esc(m.id) + '</b> <span class="muted">' + chains + day + '</span></span>' +
+      '<span class="mini' + (pct >= 90 ? ' full' : '') + '" title="الدقيقة دي: ' + fmt(m.tokens_min) + ' / ' + fmt(m.tpm) + '"><i style="width:' + pct + '%"></i></span>' + state + '</div>';
+  };
+  return '<div class="panel"><h3>الموديلات (بالترتيب: لما واحد يقف الشغل بيروح للي بعده)</h3><div class="rowlist">' + ms.map(row).join('') +
+    '</div><p class="muted" style="margin:10px 0 0">الشريط = استهلاك الدقيقة دي من الحد. Groq المجاني: 7–8 آلاف توكن في الدقيقة و200 ألف في اليوم لكل موديل، والرد المجاني الواحد حوالي 6,500 توكن.</p></div>';
 }
 
 /* single-series bar chart: messages per day, hover shows the day's details */

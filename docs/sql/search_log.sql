@@ -25,11 +25,16 @@ end $$;
 -- Arabic full-text index (stems ال / plurals reasonably well)
 create index if not exists documents_content_fts on documents using gin (to_tsvector('arabic', content));
 
--- p_scope: 'library' (public laws) | 'mine' (the user's files) | 'both'
+-- p_scope: 'library' (public laws) | 'mine' (the user's files) | 'both'; suffix '_lite' = free tier (fewer, shorter results).
+-- Result size matters: Groq free = 8k tokens per minute AND per request, and every agent step re-sends all earlier results.
 create or replace function sl_search(p_query text, p_vec text, p_user text, p_scope text, p_k int default 5) returns jsonb
 language plpgsql stable security definer set search_path = public, extensions as $$
 declare
-  owners text[] := case p_scope when 'mine' then array[p_user] when 'both' then array[p_user, 'public'] else array['public'] end;
+  lite boolean := coalesce(p_scope, '') like '%\_lite';
+  base text := regexp_replace(coalesce(p_scope, ''), '_lite$', '');
+  k int := case when coalesce(p_scope, '') like '%\_lite' then 3 else 4 end;
+  maxc int := case when coalesce(p_scope, '') like '%\_lite' then 900 else 1300 end;
+  owners text[] := case base when 'mine' then array[p_user] when 'both' then array[p_user, 'public'] else array['public'] end;
   q text := left(coalesce(p_query, ''), 500);
   tsq tsquery; art text; res jsonb; has_vec boolean := coalesce(p_vec, '') not in ('', '[]'); v vector;
 begin
@@ -48,7 +53,7 @@ begin
       from documents d
      where has_vec and d.metadata->>'userId' = any(owners)
      order by d.embedding <=> v
-     limit p_k
+     limit k
   ), kw as (
     select d.id, d.content, d.metadata,
            ts_rank_cd(to_tsvector('arabic', d.content), tsq, 1 | 32)
@@ -59,15 +64,15 @@ begin
        and ((tsq is not null and to_tsvector('arabic', d.content) @@ tsq)
             or (art is not null and d.content ~ ('ماد[ةه]\s*[\(\[]?\s*' || art || '([^0-9]|$)')))
      order by score desc
-     limit case when has_vec then 3 else least(p_k, 3) end   -- keyword-only: fewer, trimmed results (Groq free = 8k tokens/min)
+     limit case when has_vec then 2 else k end
   ), allr as (
     select distinct on (id) * from (select * from vec union all select * from kw) u order by id, score desc
   )
   select coalesce(jsonb_agg(jsonb_build_object(
            'file', metadata->>'fileName',
            'source', case when metadata->>'userId' = 'public' then 'law_library' else 'my_documents' end,
-           'match', how, 'text', case when has_vec then content else left(content, 1400) end) order by score desc), '[]'::jsonb)
-    into res from allr;
+           'match', how, 'text', left(content, maxc)) order by score desc), '[]'::jsonb)
+    into res from (select * from allr order by score desc limit k) top;
 
   return jsonb_build_object('mode', case when has_vec then 'vector+keyword' else 'keyword (Gemini embeddings unavailable)' end,
                             'results', res);
@@ -140,6 +145,10 @@ begin
           nullif(sid, ''), k, coalesce(used, 0), lim, k = 'denied_quota',
           inp, outp, src, srch, est, nullif(p->>'latency_ms', '')::int,
           nullif(p->>'model', ''), nullif(p->>'review', ''), sl_embed_ok(), p->>'exec_id', nullif(p->>'error', ''));
+  -- the models of this turn hit a rate limit: take them out of the chain for a while (llm_router.sql)
+  if coalesce(p->>'llm_error', '') <> '' and jsonb_typeof(p->'models') = 'array' then
+    perform sl_llm_fail(p->'models', p->>'llm_error');
+  end if;
   return jsonb_build_object('logged', true);
 end $$;
 

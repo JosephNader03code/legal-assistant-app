@@ -22,6 +22,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/routing_cache.sql`: model routing (`sl_route`, `sl_take`, `sl_lite`) and the semantic cache (`sl_cache_get` / `sl_cache_put`).
 - `docs/sql/case_files.sql`: case-file extraction storage and the agent tools (`sl_case_facts`, `sl_read_doc`, `sl_keyword_search`).
 - `docs/sql/feedback.sql`: 👍/👎 votes in `sl_feedback` (question, answer, rating, plan), one vote per answer (md5). Doubles as the future fine-tuning dataset: `select question, answer from sl_feedback where rating = 1 and kind = 'chat'`.
+- `docs/sql/admin.sql`: admin dashboard API (`sl_admin`: admin_overview / admin_users / admin_user_log / admin_create_user / admin_update_user / admin_update_plans), `sl_clean_limits`.
 - `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
 - `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
@@ -56,7 +57,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 ## Architecture
 
 ```
-Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session/feedback
+Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session/feedback/admin_*
                      ──POST /webhook/Chat────▶ Main workflow (chat)
                      ──POST /webhook/mindmap─▶ Main workflow (case mind map + timeline: token, sessionId, text)
                      ──POST /webhook/upload──▶ Main workflow (upload, multipart: data, filename, contentType, token, target=mine|public)
@@ -166,7 +167,8 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
   - Private rows have userId = sl_users.id.
   - Function `match_documents`; trigram index on content.
 - **`n8n_chat_histories`**: LangChain memory, session_id = `userId:sessionId`.
-- **`sl_plans`**: free has 20 messages a day and 0 docs; pro has 300 a day and 30 docs. Admins are unlimited.
+- **`sl_plans`** (edited from the admin dashboard): daily_messages, daily_maps, daily_timelines, daily_uploads, max_docs. Defaults: free 6 / 1 / 1 / 1 / 10, pro 300 / 8 / 8 / 20 / 30. Admins are unlimited.
+- **`sl_users.limits`** (jsonb): per-user overrides of any of those keys; `sl_limits(user_id)` returns the effective limits and everything (chat, maps, uploads, log) uses it. **`sl_users.disabled`** blocks login and kills sessions.
 - **`sl_users`**: plan free|pro, role user|admin, bcrypt via pgcrypto.
 - **`sl_sessions`**: 30-day tokens.
 - **`sl_usage`**: per-day message counter in Africa/Cairo time.
@@ -174,7 +176,8 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 - **`sl_cache`**: vector(768) HNSW. `sl_settings` holds cache_threshold 0.92 and cache_ttl_days 7.
 - **`sl_doc_profiles`**: user_id, file_name, full_text, profile jsonb, summary, status.
 - RLS is enabled on all `sl_*` tables with no policies. Only the n8n Postgres role (which bypasses RLS) uses them. The functions are `security definer`, with execute revoked from anon and authenticated.
-- Promote a user: `update sl_users set plan='pro'` (or `role='admin'`) `where email='…';`
+- Users, plans and limits are managed from the **admin dashboard** in the web app (avatar menu → 📊 لوحة التحكم, admins only): overview tiles + 14-day chart, users list with today's activity and filters, create user, edit plan / role / limits / disable / reset password, per-user activity log, plan limits editor.
+- Free users can upload too now (daily_uploads); the Free Agent has the `my_documents` tool. Uploads are counted in `sl_feature_usage` (feature `upload`) and logged in `sl_request_log` (kind `upload` / `upload_denied`).
 
 ### Accounts
 
@@ -247,7 +250,7 @@ manshurat.org resets connections from the container.
 5. UI:
    - Show extraction status and summary for each file (`sl_doc_profiles`); this needs a new `sl_api` action `profile`.
    - Delete-file action.
-   - Done (Nov 2026): chat-history drawer, case mind map + timeline, 👍/👎 on every answer and map.
+   - Done (Nov 2026): chat-history drawer, case mind map + timeline, 👍/👎 on every answer and map, admin dashboard.
 6. Payments / self-serve Pro upgrade (currently manual SQL).
 7. OR follow-ups once there's real usage data:
    - Tune plan limits (LP on `sl_usage`).

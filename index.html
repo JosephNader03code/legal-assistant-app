@@ -141,6 +141,72 @@ input,textarea{font:inherit;color:inherit}
 .modal h3{margin:0 0 6px;font-size:20px}
 .modal ul{padding-right:20px;color:var(--ink2)}
 
+/* ---------- admin dashboard ---------- */
+.hintline{font-size:12.5px;color:var(--mute);margin-top:8px}
+.admpage{position:fixed;inset:0;z-index:35;background:var(--bg);display:flex;flex-direction:column}
+.admpage .top h2{margin:0;font-size:17px}
+.adm-tabs{display:flex;gap:4px;padding:10px 20px 0;border-bottom:1px solid var(--line);background:var(--panel);overflow-x:auto}
+.adm-tabs button{border:0;background:transparent;padding:10px 14px;color:var(--ink2);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.adm-tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+.adm-body{flex:1;overflow-y:auto}
+.adm-wrap{max-width:1180px;margin:0 auto;padding:20px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.tile .k{font-size:12.5px;color:var(--mute);margin-bottom:4px}
+.tile .v{font-size:26px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12px;color:var(--mute);margin-top:2px}
+.tile.warn .v{color:var(--danger)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+.panel h3{margin:0 0 12px;font-size:15px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font-size:12px;padding:6px 10px;border-radius:8px;white-space:nowrap;transform:translate(50%,-110%);opacity:0;transition:opacity .1s}
+.rowlist .r{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.rowlist .r:last-child{border-bottom:0}
+.rowlist .r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini{width:90px;height:6px;border-radius:9px;background:var(--line);overflow:hidden;flex:none}
+.mini i{display:block;height:100%;background:var(--brand)}
+.mini.full i{background:var(--danger)}
+.muted{color:var(--mute);font-size:13px}
+.utool{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.utool input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);outline:none}
+.utool input:focus{border-color:var(--brand)}
+.fchip{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:13px}
+.fchip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.ucard{display:grid;grid-template-columns:minmax(180px,2fr) 90px repeat(4,minmax(70px,1fr)) 110px;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer;font-size:13.5px;transition:border .15s}
+.ucard:hover{border-color:var(--brand)}
+.ucard.head{background:transparent;border:0;cursor:default;font-size:12px;color:var(--mute);padding-top:0;padding-bottom:0}
+.ucard .who b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ucard .who small{color:var(--mute);direction:ltr;display:block;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ucard .num{font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);margin-inline-end:6px}
+.dot.on{background:var(--brand)}
+.dot.off{background:var(--danger)}
+@media (max-width:860px){
+  .ucard{grid-template-columns:1fr 1fr;row-gap:4px}
+  .ucard.head{display:none}
+  .ucard .who{grid-column:1/-1}
+  .ucard [data-l]:before{content:attr(data-l) ': ';color:var(--mute)}
+}
+.badge.admin{background:var(--brand-soft);color:var(--brand)}
+.badge.off{background:var(--danger-soft);color:var(--danger)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.form-grid .full{grid-column:1/-1}
+.form-grid label{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:4px;font-weight:500}
+.form-grid input,.form-grid select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);outline:none;font:inherit;color:inherit}
+.form-grid input:focus,.form-grid select:focus{border-color:var(--brand)}
+.form-grid input[type=checkbox]{width:auto;padding:0}
+.sub-t{font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--ink2)}
+.ptable{width:100%;border-collapse:collapse;font-size:14px}
+.ptable th,.ptable td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right}
+.ptable th{font-size:12.5px;color:var(--mute);font-weight:600}
+.ptable input{width:110px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font:inherit;color:inherit;font-variant-numeric:tabular-nums}
+.logrow{display:flex;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+.logrow span:first-child{color:var(--mute);width:96px;flex:none;direction:ltr;text-align:right}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 18px;border-radius:10px;font-size:14px;z-index:60}
+
 /* clarifying questions */
 .clar{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 16px;margin-top:4px}
 .clar .cq{margin:0 0 14px}
@@ -210,7 +276,7 @@ input,textarea{font:inherit;color:inherit}
       <h1>اسأل في القانون المصري<br>وخد إجابة واضحة بمصدرها</h1>
       <p>فريق من الـ AI agents بيدوّر في نصوص القوانين، ويراجع الإجابة قبل ما توصلك.</p>
       <div class="tiers">
-        <div class="tier"><b>مجاني · للناس</b><ul><li>إجابات بسيطة وسريعة</li><li>من مكتبة القوانين</li><li>20 سؤال في اليوم</li></ul></div>
+        <div class="tier"><b>مجاني · للناس</b><ul><li>إجابات بسيطة وسريعة</li><li>من مكتبة القوانين</li><li>أسئلة يومية مجانية</li></ul></div>
         <div class="tier"><b>Pro · للمحامين ✦</b><ul><li>تحليل قانوني بالمصادر</li><li>ارفع ملفات قضاياك</li><li>مراجعة الاستشهادات</li></ul></div>
       </div>
     </div>
@@ -247,6 +313,7 @@ input,textarea{font:inherit;color:inherit}
     </div>
     <div class="menu hidden" id="menu">
       <div class="who"><b id="mName"></b><span id="mEmail" style="color:var(--mute)"></span></div>
+      <button id="adminMenu" class="hidden">📊 لوحة التحكم</button>
       <button id="upgradeMenu">✦ الترقية لـ Pro</button>
       <button id="logoutBtn">تسجيل خروج</button>
     </div>
@@ -286,9 +353,58 @@ input,textarea{font:inherit;color:inherit}
       <input type="file" id="file" accept=".pdf,.txt,.csv" hidden>
       <label class="check hidden" id="publicWrap"><input type="checkbox" id="toPublic"> ارفعه في مكتبة القوانين العامة (أدمن)</label>
       <div class="status" id="upStatus"></div>
+      <div class="hintline" id="upHint"></div>
     </div>
     <div class="section-t">ملفاتك</div><div id="mine"></div>
     <div class="section-t">مكتبة القوانين العامة</div><div id="library"></div>
+  </div>
+</aside>
+
+<!-- admin dashboard -->
+<section class="admpage hidden" id="adminView">
+  <header class="top">
+    <div class="logo"><div class="logo-mark">📊</div><h2>لوحة التحكم</h2></div>
+    <div class="top-r">
+      <button class="btn ghost" id="admRefresh">↻ <span class="hide-sm">تحديث</span></button>
+      <button class="btn ghost" id="admClose">← الرجوع للشات</button>
+    </div>
+  </header>
+  <nav class="adm-tabs" id="admTabs">
+    <button class="on" data-t="ov">نظرة عامة</button>
+    <button data-t="us">المستخدمين</button>
+    <button data-t="pl">الباقات والحدود</button>
+  </nav>
+  <div class="adm-body"><div class="adm-wrap">
+    <div id="admOv"></div>
+    <div id="admUs" class="hidden">
+      <div class="utool">
+        <input id="uSearch" placeholder="دوّر بالاسم أو الإيميل...">
+        <button class="btn" id="uNew">＋ مستخدم جديد</button>
+      </div>
+      <div class="utool" id="uFilters"></div>
+      <div id="uList"></div>
+    </div>
+    <div id="admPl" class="hidden"></div>
+  </div></div>
+</section>
+
+<!-- user editor -->
+<aside class="drawer hidden" id="udrawer" style="z-index:41;width:min(520px,100%)">
+  <header><h3 id="uTitle">مستخدم</h3><button class="icon-btn" id="uClose">✕</button></header>
+  <div class="body">
+    <div class="alert hidden" id="uErr"></div>
+    <div class="form-grid">
+      <div class="full"><label>الاسم</label><input id="fName"></div>
+      <div class="full"><label>الإيميل</label><input id="fEmail" type="email" dir="ltr"></div>
+      <div class="full"><label id="fPassL">الباسورد</label><input id="fPass" type="text" dir="ltr" autocomplete="new-password" placeholder="8 حروف على الأقل"></div>
+      <div><label>الباقة</label><select id="fPlan"><option value="free">مجاني</option><option value="pro">Pro</option></select></div>
+      <div><label>الصلاحية</label><select id="fRole"><option value="user">مستخدم</option><option value="admin">أدمن</option></select></div>
+      <div class="full"><label class="check" style="margin:0"><input type="checkbox" id="fDisabled"> إيقاف الحساب (مش هيقدر يدخل)</label></div>
+    </div>
+    <div class="sub-t">حدود خاصة بالمستخدم ده <span class="muted">(فاضي = حد الباقة)</span></div>
+    <div class="form-grid" id="fLimits"></div>
+    <button class="btn block" id="uSave" style="margin-top:16px">حفظ</button>
+    <div id="uActivity"></div>
   </div>
 </aside>
 
@@ -367,7 +483,8 @@ function applyMe(r) {
   $('upgradeMenu').classList.toggle('hidden', pro);
   $('publicWrap').classList.toggle('hidden', u.role !== 'admin');
   setUsage(r.usage.used, r.usage.limit);
-  if (r.usage.maps && typeof r.usage.maps.map === 'number') { setMaps('mindmap', r.usage.maps.limit - r.usage.maps.map); setMaps('timeline', r.usage.maps.limit - r.usage.maps.timeline); }
+  if (r.usage.maps && typeof r.usage.maps.map === 'number') { setMaps('mindmap', r.usage.maps.limit - r.usage.maps.map); setMaps('timeline', (r.usage.maps.limit_timeline ?? r.usage.maps.limit) - r.usage.maps.timeline); }
+  $('adminMenu').classList.toggle('hidden', u.role !== 'admin');
   $('hello').textContent = 'أهلاً' + (u.name ? ' ' + u.name.split(' ')[0] : '') + ' 👋';
   $('helloSub').textContent = pro ? 'اسأل سؤالك القانوني أو في ملفات قضاياك' : 'اسأل أي سؤال قانوني بالعامية، وهرد عليك ببساطة';
   const chips = pro
@@ -397,7 +514,7 @@ $('avatar').onclick = e => { e.stopPropagation(); $('menu').classList.toggle('hi
 document.addEventListener('click', () => $('menu').classList.add('hidden'));
 $('logoutBtn').onclick = async () => { try { await api('logout'); } catch (e) {} token = null; store.clear(); location.reload(); };
 const openPro = () => { $('scrim').classList.remove('hidden'); $('proModal').classList.remove('hidden'); };
-const closeAll = () => ['scrim', 'proModal', 'drawer', 'hdrawer'].forEach(i => $(i).classList.add('hidden'));
+const closeAll = () => { ['scrim', 'proModal', 'drawer', 'hdrawer', 'udrawer'].forEach(i => $(i).classList.add('hidden')); $('scrim').style.zIndex = ''; };
 $('upgradeMenu').onclick = openPro; $('closeModal').onclick = closeAll; $('scrim').onclick = closeAll; $('closeDrawer').onclick = closeAll;
 const clearThread = () => $('thread').querySelectorAll('.msg').forEach(m => m.remove());
 const newChat = () => { if (busy) return; session = 's' + Date.now().toString(36); clearThread(); $('welcome').classList.remove('hidden'); closeAll(); q.focus(); };
@@ -486,7 +603,11 @@ async function send(opts = {}) {
 $('docsBtn').onclick = () => {
   const pro = me && (me.user.plan === 'pro' || me.user.role === 'admin');
   $('scrim').classList.remove('hidden'); $('drawer').classList.remove('hidden');
-  $('uploadBox').classList.toggle('hidden', !pro);
+  const canUp = me && me.usage.max_docs > 0;
+  $('uploadBox').classList.toggle('hidden', !canUp);
+  const lim = me && me.usage.limits;
+  $('upHint').textContent = canUp && lim && me.user.role !== 'admin'
+    ? 'رفع ' + (lim.daily_uploads === 1 ? 'مستند واحد' : lim.daily_uploads + ' مستندات') + ' في اليوم · مستخدم النهارده: ' + (me.usage.uploads_today || 0) + ' · ملفاتك: ' + me.usage.docs + ' من ' + lim.max_docs : '';
   loadDocs();
 };
 function docList(el, rows, empty) {
@@ -497,7 +618,7 @@ async function loadDocs() {
   try {
     const r = await api('docs');
     const pro = me && (me.user.plan === 'pro' || me.user.role === 'admin');
-    docList($('mine'), r.mine || [], pro ? 'لسه مرفعتش ملفات' : '<a href="#" id="upLink">رفع الملفات متاح في Pro ✦</a>');
+    docList($('mine'), r.mine || [], me && me.usage.max_docs > 0 ? 'لسه مرفعتش ملفات' : '<a href="#" id="upLink">رفع الملفات متاح في Pro ✦</a>');
     const l = $('upLink'); if (l) l.onclick = e => { e.preventDefault(); $('drawer').classList.add('hidden'); openPro(); };
     docList($('library'), r.library || [], 'المكتبة لسه فاضية');
   } catch (e) {}
@@ -526,6 +647,187 @@ async function refreshMe() { try { const r = await api('me'); if (r.ok) applyMe(
 
 
 
+
+
+/* ---------- admin dashboard ---------- */
+const LIMITS = [['daily_messages', 'رسايل في اليوم'], ['daily_maps', 'خرايط ذهنية في اليوم'], ['daily_timelines', 'خطوط زمنية في اليوم'], ['daily_uploads', 'رفع مستندات في اليوم'], ['max_docs', 'أقصى عدد ملفات']];
+const adm = { users: [], plans: [], filter: 'all', tab: 'ov', editing: null };
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Number(n || 0).toLocaleString('en-US');
+const ago = t => {
+  if (!t) return 'ولا مرة';
+  const m = Math.round((Date.now() - new Date(t)) / 6e4);
+  if (m < 1) return 'دلوقتي'; if (m < 60) return 'من ' + m + ' دقيقة'; if (m < 1440) return 'من ' + Math.round(m / 60) + ' ساعة';
+  const d = Math.round(m / 1440); return d === 1 ? 'امبارح' : 'من ' + d + ' يوم';
+};
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+$('adminMenu').onclick = () => { $('menu').classList.add('hidden'); $('adminView').classList.remove('hidden'); admLoad(); };
+$('admClose').onclick = () => { $('adminView').classList.add('hidden'); refreshMe(); };
+$('admRefresh').onclick = () => admLoad();
+$('admTabs').querySelectorAll('button').forEach(b => b.onclick = () => {
+  adm.tab = b.dataset.t; $('admTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  $('admOv').classList.toggle('hidden', adm.tab !== 'ov'); $('admUs').classList.toggle('hidden', adm.tab !== 'us'); $('admPl').classList.toggle('hidden', adm.tab !== 'pl');
+});
+async function admLoad() {
+  $('admOv').innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span>بيحمّل</div>';
+  try {
+    const [o, u] = await Promise.all([api('admin_overview'), api('admin_users')]);
+    if (!o.ok || !u.ok) throw new Error(o.error || u.error);
+    adm.users = u.users || []; adm.plans = o.plans || [];
+    renderOverview(o); renderUsers(); renderPlans();
+  } catch (e) { $('admOv').innerHTML = '<div class="alert">مقدرتش أحمّل البيانات: ' + esc(e.message) + '</div>'; }
+}
+
+function tile(k, v, s, warn) { return '<div class="tile' + (warn ? ' warn' : '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : '') + '</div>'; }
+function renderOverview(o) {
+  const a = o.activity, us = o.users;
+  const kwShare = a.answers_today ? Math.round(a.keyword_today / Math.max(1, a.answers_today - a.cached_today) * 100) : 0;
+  let h = '<div class="tiles">' +
+    tile('المستخدمين', fmt(us.total), 'مجاني ' + fmt(us.free) + ' · Pro ' + fmt(us.pro) + ' · أدمن ' + fmt(us.admins) + (us.disabled ? ' · موقوف ' + fmt(us.disabled) : '')) +
+    tile('نشطين النهارده', fmt(a.active_today), 'بعتوا رسالة واحدة على الأقل') +
+    tile('رسايل النهارده', fmt(a.messages_today), fmt(a.clarify_today) + ' أسئلة قبل الرد · ' + fmt(a.cached_today) + ' من الكاش') +
+    tile('رفعوا مستندات النهارده', fmt(a.uploaders_today), fmt(a.uploads_today) + ' ملف') +
+    tile('خرايط · خطوط زمنية', '🧠 ' + fmt(a.maps_today) + '&nbsp; 🕒 ' + fmt(a.timelines_today), 'النهارده') +
+    tile('وصلوا للحد النهارده', fmt(a.quota_users_today), 'مستخدم اترفضت رسالته', a.quota_users_today > 0) +
+    tile('ردود فشلت النهارده', fmt(a.failed_today), 'غالبًا من حدود الموديلات المجانية', a.failed_today > 0) +
+    tile('متوسط وقت الرد', a.avg_seconds_today != null ? a.avg_seconds_today + ' ث' : '—', 'للردود الناجحة النهارده') +
+    tile('توكنز النهارده (تقديري)', fmt(a.tokens_est_today), 'كل الموديلات') +
+    tile('تقييمات آخر 7 أيام', '👍 ' + fmt(a.likes_7d) + '&nbsp; 👎 ' + fmt(a.dislikes_7d), '') +
+    tile('البحث في القوانين', o.search.gemini_ok ? 'بالمعنى ✓' : 'بالكلمات', o.search.gemini_ok ? 'Gemini شغال' : 'Gemini واقف لحد ' + new Date(o.search.down_until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (kwShare ? ' · ' + kwShare + '% من ردود النهارده' : ''), !o.search.gemini_ok) +
+    tile('مستخدمين جداد', fmt(us.new_today), fmt(us.new_7d) + ' في آخر 7 أيام') +
+    '</div>';
+  h += '<div class="panel"><h3>الرسايل في آخر 14 يوم</h3><div class="chart" id="admChart"></div></div>';
+  h += '<div class="grid2"><div class="panel"><h3>الأكتر استخدامًا النهارده</h3><div class="rowlist">' +
+    (o.top_today.length ? o.top_today.map(t => {
+      const pct = Math.min(100, t.messages / Math.max(1, t.limit) * 100);
+      return '<div class="r" data-id="' + esc(t.id) + '" style="cursor:pointer"><span class="n">' + esc(t.name) + ' <span class="muted">' + esc(t.plan === 'admin' ? 'أدمن' : t.plan === 'pro' ? 'Pro' : 'مجاني') + '</span></span>' +
+        '<span class="num">' + fmt(t.messages) + (t.limit < 100000 ? ' / ' + fmt(t.limit) : '') + '</span>' +
+        (t.limit < 100000 ? '<span class="mini' + (pct >= 100 ? ' full' : '') + '"><i style="width:' + pct + '%"></i></span>' : '') + '</div>';
+    }).join('') : '<div class="muted">محدش بعت رسايل النهارده لسه.</div>') + '</div></div>' +
+    '<div class="panel"><h3>آخر ردود اتعملها 👎</h3><div class="rowlist">' +
+    (o.recent_dislikes.length ? o.recent_dislikes.map(x => '<div class="r" style="display:block"><div><b>' + esc(x.name) + '</b> <span class="muted">' + ago(x.at) + '</span></div><div class="muted">س: ' + esc(x.question || '—') + '</div></div>').join('') : '<div class="muted">مفيش تقييمات سلبية.</div>') +
+    '</div></div></div>';
+  $('admOv').innerHTML = h;
+  $('admOv').querySelectorAll('[data-id]').forEach(el => el.onclick = () => openUser(adm.users.find(u => u.id === el.dataset.id)));
+  barChart($('admChart'), o.series || []);
+}
+
+/* single-series bar chart: messages per day, hover shows the day's details */
+function barChart(el, rows) {
+  const W = 760, H = 220, L = 36, B = 26, T = 10, n = rows.length || 1;
+  const max = Math.max(4, ...rows.map(r => r.messages));
+  const nice = Math.pow(10, Math.floor(Math.log10(max))), top = Math.ceil(max / nice) * nice;
+  const bw = (W - L) / n, css = getComputedStyle(document.documentElement);
+  const brand = css.getPropertyValue('--brand').trim(), line = css.getPropertyValue('--line').trim(), mute = css.getPropertyValue('--mute').trim();
+  let g = '';
+  [0, .5, 1].forEach(f => { const y = T + (H - T - B) * (1 - f); g += '<line x1="' + L + '" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="' + line + '" stroke-width="1"/><text x="' + (L - 6) + '" y="' + (y + 4) + '" font-size="11" fill="' + mute + '" text-anchor="end">' + fmt(Math.round(top * f)) + '</text>'; });
+  rows.forEach((r, i) => {
+    const h = (H - T - B) * r.messages / top, x = L + i * bw + bw * .18, w = bw * .64, y = H - B - h;
+    if (h > 0) g += '<path d="M' + x + ',' + (H - B) + 'V' + (y + Math.min(4, h)) + 'q0,-' + Math.min(4, h) + ' ' + Math.min(4, w / 2) + ',-' + Math.min(4, h) + 'H' + (x + w - Math.min(4, w / 2)) + 'q' + Math.min(4, w / 2) + ',0 ' + Math.min(4, w / 2) + ',' + Math.min(4, h) + 'V' + (H - B) + 'Z" fill="' + brand + '"/>';
+    g += '<rect x="' + (L + i * bw) + '" y="' + T + '" width="' + bw + '" height="' + (H - T) + '" fill="transparent" data-i="' + i + '"/>';
+    if (i % 2 === (n - 1) % 2) g += '<text x="' + (L + i * bw + bw / 2) + '" y="' + (H - 8) + '" font-size="11" fill="' + mute + '" text-anchor="middle">' + (+r.day.slice(8)) + '/' + (+r.day.slice(5, 7)) + '</text>';
+  });
+  el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="عدد الرسايل في آخر 14 يوم" direction="ltr">' + g + '</svg><div class="tip"></div>';
+  const tip = el.querySelector('.tip'), svg = el.querySelector('svg');
+  svg.querySelectorAll('rect[data-i]').forEach(rc => {
+    rc.onmouseenter = rc.ontouchstart = () => {
+      const r = rows[+rc.dataset.i], bb = rc.getBoundingClientRect(), eb = el.getBoundingClientRect();
+      tip.innerHTML = '<b>' + new Date(r.day).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b><br>' + fmt(r.messages) + ' رسالة · ' + fmt(r.active) + ' مستخدم نشط · ' + fmt(r.uploads) + ' مستند';
+      tip.style.right = (eb.right - bb.right + bb.width / 2) + 'px'; tip.style.top = '20px'; tip.style.opacity = 1;
+    };
+    rc.onmouseleave = () => { tip.style.opacity = 0; };
+  });
+}
+
+/* ---------- users ---------- */
+const FILTERS = [['all', 'الكل'], ['active', 'نشط النهارده'], ['upload', 'رفع مستند النهارده'], ['quota', 'وصل للحد'], ['inactive', 'مبعتش النهارده'], ['pro', 'Pro'], ['free', 'مجاني'], ['off', 'موقوف']];
+$('uSearch').oninput = () => renderUsers();
+$('uNew').onclick = () => openUser(null);
+function renderUsers() {
+  const count = k => adm.users.filter(u => match(u, k)).length;
+  $('uFilters').innerHTML = FILTERS.map(([k, t]) => '<button class="fchip' + (adm.filter === k ? ' on' : '') + '" data-f="' + k + '">' + t + ' (' + fmt(count(k)) + ')</button>').join('');
+  $('uFilters').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { adm.filter = b.dataset.f; renderUsers(); });
+  const qv = $('uSearch').value.trim().toLowerCase();
+  const list = adm.users.filter(u => match(u, adm.filter) && (!qv || (u.email + ' ' + (u.name || '')).toLowerCase().includes(qv)));
+  const head = '<div class="ucard head"><span>المستخدم</span><span>الباقة</span><span>رسايل النهارده</span><span>خرايط · زمني</span><span>مستندات</span><span>شاتات النهارده</span><span>آخر نشاط</span></div>';
+  $('uList').innerHTML = head + (list.length ? list.map(u => {
+    const lim = u.limits || {}, unl = u.role === 'admin';
+    const plan = u.disabled ? '<span class="badge off">موقوف</span>' : u.role === 'admin' ? '<span class="badge admin">أدمن</span>' : u.plan === 'pro' ? '<span class="badge pro">Pro ✦</span>' : '<span class="badge">مجاني</span>';
+    return '<div class="ucard" data-id="' + esc(u.id) + '">' +
+      '<div class="who"><b><span class="dot ' + (u.disabled ? 'off' : u.messages_today > 0 ? 'on' : '') + '"></span>' + esc(u.name || u.email.split('@')[0]) + '</b><small>' + esc(u.email) + '</small></div>' +
+      '<div>' + plan + '</div>' +
+      '<div class="num" data-l="رسايل النهارده">' + fmt(u.messages_today) + (unl ? '' : ' / ' + fmt(lim.daily_messages)) + (u.quota_hit_today ? ' <span title="وصل للحد">⛔</span>' : '') + '</div>' +
+      '<div class="num" data-l="خرايط · زمني">🧠 ' + fmt(u.maps_today) + '&nbsp;&nbsp;🕒 ' + fmt(u.timelines_today) + '</div>' +
+      '<div class="num" data-l="مستندات">' + fmt(u.docs) + (u.uploads_today ? ' <span class="muted">(+' + fmt(u.uploads_today) + ' النهارده)</span>' : '') + '</div>' +
+      '<div class="num" data-l="شاتات النهارده">' + fmt(u.chats_today) + '</div>' +
+      '<div class="muted" data-l="آخر نشاط">' + ago(u.last_active) + '</div></div>';
+  }).join('') : '<div class="muted" style="padding:12px">مفيش مستخدمين بالفلتر ده.</div>');
+  $('uList').querySelectorAll('.ucard[data-id]').forEach(el => el.onclick = () => openUser(adm.users.find(u => u.id === el.dataset.id)));
+}
+function match(u, k) {
+  if (k === 'active') return u.messages_today > 0; if (k === 'upload') return u.uploads_today > 0; if (k === 'quota') return u.quota_hit_today;
+  if (k === 'inactive') return !u.messages_today && !u.disabled; if (k === 'pro') return u.plan === 'pro' && u.role !== 'admin';
+  if (k === 'free') return u.plan === 'free' && u.role !== 'admin'; if (k === 'off') return u.disabled; return true;
+}
+function planOf(name) { return adm.plans.find(p => p.plan === name) || {}; }
+function openUser(u) {
+  adm.editing = u; const isNew = !u;
+  $('uErr').classList.add('hidden');
+  $('uTitle').textContent = isNew ? '＋ مستخدم جديد' : (u.name || u.email);
+  $('fName').value = u ? u.name || '' : ''; $('fEmail').value = u ? u.email : ''; $('fEmail').disabled = !isNew;
+  $('fPass').value = ''; $('fPassL').textContent = isNew ? 'الباسورد' : 'باسورد جديد (سيبه فاضي لو مش هتغيّره)';
+  $('fPlan').value = u ? u.plan : 'free'; $('fRole').value = u ? u.role : 'user'; $('fDisabled').checked = !!(u && u.disabled);
+  const fill = () => {
+    const pl = planOf($('fPlan').value), ov = (adm.editing && adm.editing.overrides) || {};
+    $('fLimits').innerHTML = LIMITS.map(([k, t]) => '<div><label>' + t + '</label><input type="number" min="0" inputmode="numeric" data-k="' + k + '" value="' + (ov[k] ?? '') + '" placeholder="' + (pl[k] ?? '') + ' (الباقة)"></div>').join('');
+  };
+  fill(); $('fPlan').onchange = fill;
+  $('uActivity').innerHTML = '';
+  $('udrawer').classList.remove('hidden'); $('scrim').classList.remove('hidden'); $('scrim').style.zIndex = 40;
+  if (!isNew) loadUserLog(u.id);
+}
+$('uClose').onclick = () => { $('udrawer').classList.add('hidden'); $('scrim').classList.add('hidden'); $('scrim').style.zIndex = ''; };
+const KIND_AR = { free: 'رد', pro: 'رد Pro', cached: 'رد من الكاش', clarify: 'أسئلة قبل الرد', mindmap: 'خريطة ذهنية', timeline: 'خط زمني', denied_quota: '⛔ وصل للحد', denied_unauth: 'غير مسجل', upload: '📄 رفع مستند', upload_denied: '⛔ رفع مرفوض', mindmap_denied: '⛔ خريطة مرفوضة', timeline_denied: '⛔ خط زمني مرفوض' };
+async function loadUserLog(id) {
+  $('uActivity').innerHTML = '<div class="sub-t">آخر نشاط</div><div class="muted">بيحمّل...</div>';
+  try {
+    const r = await api('admin_user_log', { id });
+    const rows = r.log || [];
+    $('uActivity').innerHTML = '<div class="sub-t">آخر نشاط</div>' + (rows.length ? rows.map(x => '<div class="logrow"><span>' + new Date(x.at).toLocaleString('en-GB', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</span><span>' +
+      esc(KIND_AR[x.kind] || x.kind) + (x.msg_no != null && x.kind !== 'upload' ? ' · رسالة ' + fmt(x.msg_no) + (x.msg_limit < 100000 ? '/' + fmt(x.msg_limit) : '') : '') +
+      (x.seconds ? ' · ' + x.seconds + 'ث' : '') + (x.tokens ? ' · ' + fmt(x.tokens) + ' توكن' : '') + (x.error ? ' · <span class="err">' + esc(x.error) + '</span>' : '') + '</span></div>').join('') : '<div class="muted">مفيش نشاط متسجل لسه.</div>');
+  } catch (e) { $('uActivity').innerHTML = ''; }
+}
+$('uSave').onclick = async () => {
+  const u = adm.editing, limits = {};
+  $('fLimits').querySelectorAll('input').forEach(i => { if (i.value.trim() !== '') limits[i.dataset.k] = +i.value; });
+  const body = { name: $('fName').value, plan: $('fPlan').value, role: $('fRole').value, limits };
+  if ($('fPass').value) body.password = $('fPass').value;
+  let r;
+  $('uSave').disabled = true;
+  try {
+    r = u ? await api('admin_update_user', { id: u.id, disabled: $('fDisabled').checked, ...body })
+          : await api('admin_create_user', { email: $('fEmail').value, ...body });
+    if (!r.ok) throw new Error(r.error);
+    if (!u && $('fDisabled').checked && r.id) await api('admin_update_user', { id: r.id, disabled: true });
+    $('uClose').click(); toast(u ? '✓ اتحفظ' : '✓ اتعمل المستخدم'); admLoad();
+  } catch (e) { $('uErr').textContent = e.message; $('uErr').classList.remove('hidden'); }
+  $('uSave').disabled = false;
+};
+
+/* ---------- plans ---------- */
+function renderPlans() {
+  const ps = adm.plans;
+  $('admPl').innerHTML = '<div class="panel" style="margin-top:0"><h3>حدود الباقات</h3><p class="muted" style="margin:0 0 12px">بتتطبق على كل المستخدمين في الباقة، إلا اللي ليه حد خاص من صفحة المستخدم. الأدمن مفتوح.</p>' +
+    '<div style="overflow-x:auto"><table class="ptable"><thead><tr><th></th>' + ps.map(p => '<th>' + (p.plan === 'pro' ? 'Pro ✦' : p.plan === 'free' ? 'مجاني' : esc(p.plan)) + '</th>').join('') + '</tr></thead><tbody>' +
+    LIMITS.map(([k, t]) => '<tr><td>' + t + '</td>' + ps.map(p => '<td><input type="number" min="0" inputmode="numeric" data-p="' + esc(p.plan) + '" data-k="' + k + '" value="' + p[k] + '"></td>').join('') + '</tr>').join('') +
+    '</tbody></table></div><button class="btn" id="plSave" style="margin-top:14px">حفظ الحدود</button></div>';
+  $('plSave').onclick = async () => {
+    const plans = ps.map(p => { const o = { plan: p.plan }; $('admPl').querySelectorAll('input[data-p="' + p.plan + '"]').forEach(i => o[i.dataset.k] = +i.value); return o; });
+    const r = await api('admin_update_plans', { plans });
+    if (r.ok) { adm.plans = r.plans; toast('✓ الحدود اتحفظت'); admLoad(); } else toast('✕ ' + (r.error || 'حصل خطأ'));
+  };
+}
 
 /* ---------- clarifying questions (asked before the first answer) ---------- */
 function renderClarify(bot, question, data) {

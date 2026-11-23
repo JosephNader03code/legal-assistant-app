@@ -118,7 +118,7 @@ begin
   if u.id is not null then
     select * into pl from sl_plans where plan = u.plan;
     select messages into used from sl_usage where user_id = u.id and day = (now() at time zone 'Africa/Cairo')::date;
-    lim := case when u.role = 'admin' then 100000 else pl.daily_messages end;
+    lim := (sl_limits(u.id)->>'daily_messages')::int;
     select coalesce(sum(length(message->>'content')), 0) into hist from (
       select message from n8n_chat_histories where session_id = u.id::text || ':' || sid
        and jsonb_typeof(message->'content') = 'string' order by id desc limit 6) h;
@@ -142,6 +142,16 @@ begin
           nullif(p->>'model', ''), nullif(p->>'review', ''), sl_embed_ok(), p->>'exec_id', nullif(p->>'error', ''));
   return jsonb_build_object('logged', true);
 end $$;
+
+-- uploads go to the request log too (admin dashboard: "who uploaded today")
+create or replace function sl_upload_log(j jsonb, p_kind text, p_err text) returns void
+language sql security definer set search_path = public as $$
+  insert into sl_request_log (user_id, nickname, plan, kind, msg_no, msg_limit, error)
+  values ((j->'user'->>'id')::uuid, coalesce(nullif(j->'user'->>'name', ''), split_part(j->'user'->>'email', '@', 1)),
+          case when j->'user'->>'role' = 'admin' then 'admin' else j->'user'->>'plan' end, p_kind,
+          (j->'usage'->>'uploads_today')::int + case when p_kind = 'upload' then 1 else 0 end,
+          (j->'usage'->'limits'->>'daily_uploads')::int, p_err)
+$$;
 
 -- real token counts (run by a maintenance job / Claude session from n8n execution data)
 create or replace function sl_log_set_tokens(p_exec text, p_in int, p_out int) returns int
@@ -174,6 +184,6 @@ select day, user_id, max(nickname) as nickname, max(plan) as plan,
  group by day, user_id;
 
 revoke all on function sl_embed_ok(), sl_embed_trip(text), sl_search(text, text, text, text, int),
-  sl_log(jsonb), sl_log_set_tokens(text, int, int) from public, anon, authenticated;
+  sl_log(jsonb), sl_log_set_tokens(text, int, int), sl_upload_log(jsonb, text, text) from public, anon, authenticated;
 revoke all on sl_daily_usage from anon, authenticated;
 select 'ok' as status;

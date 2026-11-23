@@ -6,9 +6,7 @@ create index if not exists n8n_chat_histories_session_pattern
   on n8n_chat_histories (session_id varchar_pattern_ops, id);
 
 -- daily mind-map quota per plan (free = 2/day). Change with: update sl_plans set daily_maps = N where plan = 'free';
-alter table sl_plans add column if not exists daily_maps int not null default 2;
-update sl_plans set daily_maps = 2 where plan = 'free';
-update sl_plans set daily_maps = 8 where plan = 'pro';
+alter table sl_plans add column if not exists daily_maps int not null default 1;  -- values are edited from the admin dashboard
 
 create table if not exists sl_feature_usage (
   user_id uuid not null references sl_users(id) on delete cascade,
@@ -106,8 +104,8 @@ drop function if exists sl_map_finish(boolean, uuid, text, int, jsonb);
 create or replace function sl_maps_usage(j jsonb) returns jsonb
 language sql security definer set search_path = public as $$
   select jsonb_build_object(
-    'limit', case when j->'user'->>'role' = 'admin' then 100000
-                  else (select daily_maps from sl_plans where plan = j->'user'->>'plan') end,
+    'limit', (sl_limits((j->'user'->>'id')::uuid)->>'daily_maps')::int,
+    'limit_timeline', (sl_limits((j->'user'->>'id')::uuid)->>'daily_timelines')::int,
     'map', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
                       and day = (now() at time zone 'Africa/Cairo')::date and feature = 'map'), 0),
     'timeline', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
@@ -129,8 +127,7 @@ begin
   if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized', 'output', 'لازم تسجل دخول الأول.'); end if;
   uid := (j->'user'->>'id')::uuid;
   is_pro := j->'user'->>'plan' = 'pro' or j->'user'->>'role' = 'admin';
-  lim := case when j->'user'->>'role' = 'admin' then 100000
-              else (select daily_maps from sl_plans where plan = j->'user'->>'plan') end;
+  lim := (sl_limits(uid)->>(case when feat = 'timeline' then 'daily_timelines' else 'daily_maps' end))::int;
   select coalesce(n, 0) into used from sl_feature_usage where user_id = uid and day = d and feature = feat;
   used := coalesce(used, 0);
   if used >= lim then
@@ -147,11 +144,12 @@ begin
            where session_id = key and message->>'type' in ('human', 'ai')
              and jsonb_typeof(message->'content') = 'string' and coalesce(message->>'content', '') <> ''
            order by id desc limit 12) x;
-  if is_pro then
+  -- summaries of the user's uploaded case files (any plan that can upload)
+  begin
     select coalesce(string_agg('ملف: ' || file_name || E'\n' || left(coalesce(summary, left(full_text, 3000)), 3000), E'\n\n'), '')
       into docs
       from (select * from sl_doc_profiles where user_id = uid::text order by created_at desc limit 2) f;
-  end if;
+  end;
   if coalesce(trim(p_text), '') = '' and coalesce(chat, '') = '' and docs = '' then
     return jsonb_build_object('ok', false, 'error', 'empty', 'type', feat, 'output', 'اكتب وقائع القضية الأول (أو اسأل عنها في المحادثة) وبعدين اطلب ' || what || '.');
   end if;

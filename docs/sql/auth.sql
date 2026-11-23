@@ -82,7 +82,12 @@ begin
     return sl_user_json(t) || jsonb_build_object('token', t);
   elsif p_action = 'me' then
     j := sl_user_json(v_token);
-    return coalesce(j, jsonb_build_object('ok', false, 'error', 'unauthorized'));
+    if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
+    return jsonb_set(j, '{usage,maps}', sl_maps_usage(j));   -- history_maps.sql
+  elsif p_action in ('sessions', 'history', 'delete_session') then
+    j := sl_user_json(v_token);
+    if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
+    return sl_api_ext(p_action, p, j);                         -- history_maps.sql
   elsif p_action = 'logout' then
     delete from sl_sessions where token = v_token;
     return jsonb_build_object('ok', true);

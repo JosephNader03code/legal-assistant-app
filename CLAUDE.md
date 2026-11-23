@@ -20,6 +20,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/auth.sql`: users, sessions, plans, quotas, `sl_api`, `sl_consume`, `sl_can_upload`.
 - `docs/sql/routing_cache.sql`: model routing (`sl_route`, `sl_take`, `sl_lite`) and the semantic cache (`sl_cache_get` / `sl_cache_put`).
 - `docs/sql/case_files.sql`: case-file extraction storage and the agent tools (`sl_case_facts`, `sl_read_doc`, `sl_keyword_search`).
+- `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
 - `docs/ws_fetch.py`: downloads law texts from Arabic Wikisource.
 - `docs/clean_law.py`: normalizes Arabic law text and splits it into upload parts at article boundaries.
 
@@ -51,8 +52,9 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 ## Architecture
 
 ```
-Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs
+Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session
                      ──POST /webhook/Chat────▶ Main workflow (chat)
+                     ──POST /webhook/mindmap─▶ Main workflow (case mind map + timeline: token, sessionId, text)
                      ──POST /webhook/upload──▶ Main workflow (upload, multipart: data, filename, contentType, token, target=mine|public)
 ```
 
@@ -85,6 +87,16 @@ Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶
 7. `Finalize` → `Respond to Chat`.
 
 Response JSON: `{ok, output, plan, remaining, intent?, legal_area?, review?: pass|fixed|skipped|failed, answeredBy?, cached?, model?, complexity?}`.
+
+### Mind map flow (main workflow, group "Case mind map + timeline")
+
+`Map Webhook` (path `mindmap`) → `Map Auth` (`sl_map_take(token, sessionId, text)`: auth, daily map quota, builds the context from the last 12 chat turns + the user's text + for Pro the 2 latest `sl_doc_profiles` summaries, max 12k chars) → `Map Allowed?` → `Map Builder` (Groq `gpt-oss-120b`, fallback OpenRouter; strict JSON) → `Map Parse` (sanitizes / limits size) → `Map Save` (`sl_map_finish`: saves to `sl_maps`, or refunds the quota when generation failed) → `Respond Map`.
+
+Response: `{ok, map: {request, title, mindmap: {label, children[]}, timeline: [{date, event, kind: fact|procedure|deadline|next}], missing[]}, maps_left}`. Quota: `sl_plans.daily_maps` (free 2 / pro 30 per day, Cairo time; admins unlimited). The UI draws the map as SVG itself (no library) and offers PNG/SVG download. Messages containing "mind map / خريطة ذهنية / خط زمني / تايم لاين" are routed here automatically.
+
+### Chat history
+
+Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client sessionId is `'s' + Date.now().toString(36)`, so the UI derives the date from it). `sl_clean_msg` strips the Pro triage notes from stored human messages. Note: for Pro, memory stores the Expert's draft, not the QA-corrected final answer. Saved maps are merged into `history` by `after_msg_id`.
 
 ### Upload flow
 
@@ -203,6 +215,7 @@ manshurat.org resets connections from the container.
 5. UI:
    - Show extraction status and summary for each file (`sl_doc_profiles`); this needs a new `sl_api` action `profile`.
    - Delete-file action.
+   - Done (Nov 2026): chat-history drawer, case mind map + timeline.
 6. Payments / self-serve Pro upgrade (currently manual SQL).
 7. OR follow-ups once there's real usage data:
    - Tune plan limits (LP on `sl_usage`).

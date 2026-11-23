@@ -131,6 +131,45 @@ input,textarea{font:inherit;color:inherit}
 .modal{position:fixed;z-index:31;top:50%;left:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 32px));background:var(--panel);border-radius:18px;padding:26px;box-shadow:var(--shadow)}
 .modal h3{margin:0 0 6px;font-size:20px}
 .modal ul{padding-right:20px;color:var(--ink2)}
+
+/* history drawer */
+.drawer.right{left:auto;right:0}
+.sess{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:border .15s}
+.sess:hover{border-color:var(--brand)}
+.sess.on{border-color:var(--brand);background:var(--brand-soft)}
+.sess .t{flex:1;min-width:0}
+.sess .t b{display:block;font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess .t small{color:var(--mute);font-size:12px}
+.sess .del{border:0;background:transparent;color:var(--mute);width:28px;height:28px;border-radius:8px;flex:none}
+.sess .del:hover{background:var(--danger-soft);color:var(--danger)}
+.day-t{font-size:12px;color:var(--mute);font-weight:600;margin:14px 2px 6px}
+
+/* case map card */
+.mapcard{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden}
+.mapcard .mhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.mapcard .mhead b{font-size:15px}
+.mtabs{display:inline-grid;grid-auto-flow:column;background:var(--line);border-radius:10px;padding:3px}
+.mtabs button{border:0;background:transparent;padding:5px 12px;border-radius:8px;color:var(--ink2);font-size:13px}
+.mtabs button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.mview{overflow:auto;max-height:70vh;padding:12px;-webkit-overflow-scrolling:touch}
+.mview svg{display:block;margin-inline-start:auto;max-width:none;height:auto}
+.mview[data-p="mm"]{max-height:none}
+.zoom{display:inline-flex;gap:4px;margin-inline-start:auto}
+.zoom button{width:32px;padding:6px 0}
+.mactions{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line)}
+.mactions button{font-size:12.5px;padding:6px 10px}
+.missing{margin:0;padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--ink2);background:var(--gold-soft)}
+.missing ul{margin:4px 0 0;padding-right:18px}
+.tl{position:relative;margin:4px 8px 4px 0;padding-right:22px}
+.tl:before{content:"";position:absolute;right:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl-i{position:relative;margin:0 0 14px}
+.tl-i:before{content:"";position:absolute;right:-21px;top:7px;width:12px;height:12px;border-radius:50%;background:var(--panel);border:3px solid var(--k)}
+.tl-d{display:inline-block;font-size:12px;font-weight:600;color:var(--k);background:color-mix(in srgb,var(--k) 12%,transparent);border-radius:999px;padding:1px 10px;margin-bottom:3px}
+.tl-k{font-size:11px;color:var(--mute);margin-inline-start:6px}
+.tl-e{font-size:14.5px}
+.mfull{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column}
+.mfull header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.mfull .mview{max-height:none;flex:1}
 </style>
 </head>
 <body>
@@ -173,6 +212,7 @@ input,textarea{font:inherit;color:inherit}
     <div class="top-r">
       <div class="usage" title="رسايل النهارده"><span id="usageTxt"></span><div class="meter"><i id="usageBar"></i></div></div>
       <span class="badge" id="planBadge">مجاني</span>
+      <button class="btn ghost" id="histBtn" title="المحادثات القديمة">🕘 <span class="hide-sm">المحادثات</span></button>
       <button class="btn ghost" id="docsBtn">📄 <span class="hide-sm">المستندات</span></button>
       <button class="btn ghost" id="newBtn" title="محادثة جديدة">＋ <span class="hide-sm">جديدة</span></button>
       <button class="avatar" id="avatar"></button>
@@ -198,11 +238,12 @@ input,textarea{font:inherit;color:inherit}
   <div class="composer-wrap">
     <div class="composer">
       <textarea id="q" rows="1" placeholder="اكتب سؤالك هنا..."></textarea>
+      <button class="icon-btn" id="mapBtn" title="خريطة ذهنية وخط زمني للقضية">🗺️</button>
       <button class="send" id="send" title="إرسال" disabled>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
       </button>
     </div>
-    <div class="hint">الإجابات للاسترشاد ومش بديل عن محامي.</div>
+    <div class="hint">الإجابات للاسترشاد ومش بديل عن محامي. · 🗺️ <span id="mapsLeft">خريطة ذهنية وخط زمني للقضية</span></div>
   </div>
 </section>
 
@@ -219,6 +260,15 @@ input,textarea{font:inherit;color:inherit}
     </div>
     <div class="section-t">ملفاتك</div><div id="mine"></div>
     <div class="section-t">مكتبة القوانين العامة</div><div id="library"></div>
+  </div>
+</aside>
+
+<!-- history drawer -->
+<aside class="drawer right hidden" id="hdrawer">
+  <header><h3>🕘 المحادثات القديمة</h3><button class="icon-btn" id="closeH">✕</button></header>
+  <div class="body">
+    <button class="btn block" id="newBtn2">＋ محادثة جديدة</button>
+    <div id="sessList" style="margin-top:8px"></div>
   </div>
 </aside>
 
@@ -288,6 +338,7 @@ function applyMe(r) {
   $('upgradeMenu').classList.toggle('hidden', pro);
   $('publicWrap').classList.toggle('hidden', u.role !== 'admin');
   setUsage(r.usage.used, r.usage.limit);
+  if (r.usage.maps) setMaps(r.usage.maps.limit - r.usage.maps.used);
   $('hello').textContent = 'أهلاً' + (u.name ? ' ' + u.name.split(' ')[0] : '') + ' 👋';
   $('helloSub').textContent = pro ? 'اسأل سؤالك القانوني أو في ملفات قضاياك' : 'اسأل أي سؤال قانوني بالعامية، وهرد عليك ببساطة';
   const chips = pro
@@ -300,6 +351,11 @@ function setUsage(used, limit) {
   $('usageTxt').textContent = used + ' / ' + limit + ' النهارده';
   $('usageBar').style.width = Math.min(100, used / limit * 100) + '%';
 }
+function setMaps(left) {
+  if (!me || me.user.role === 'admin' || typeof left !== 'number') return;
+  me.mapsLeft = left;
+  $('mapsLeft').textContent = left > 0 ? 'فاضل لك ' + left + (left === 1 ? ' خريطة' : left === 2 ? ' خريطتين' : ' خرايط') + ' النهارده' : 'خلصت خرايط النهارده';
+}
 function showApp() { $('authView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('q').focus(); }
 function showAuth() { $('appView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
 
@@ -307,9 +363,11 @@ $('avatar').onclick = e => { e.stopPropagation(); $('menu').classList.toggle('hi
 document.addEventListener('click', () => $('menu').classList.add('hidden'));
 $('logoutBtn').onclick = async () => { try { await api('logout'); } catch (e) {} token = null; store.clear(); location.reload(); };
 const openPro = () => { $('scrim').classList.remove('hidden'); $('proModal').classList.remove('hidden'); };
-const closeAll = () => ['scrim', 'proModal', 'drawer'].forEach(i => $(i).classList.add('hidden'));
+const closeAll = () => ['scrim', 'proModal', 'drawer', 'hdrawer'].forEach(i => $(i).classList.add('hidden'));
 $('upgradeMenu').onclick = openPro; $('closeModal').onclick = closeAll; $('scrim').onclick = closeAll; $('closeDrawer').onclick = closeAll;
-$('newBtn').onclick = () => { session = 's' + Date.now().toString(36); $('thread').querySelectorAll('.msg').forEach(m => m.remove()); $('welcome').classList.remove('hidden'); };
+const clearThread = () => $('thread').querySelectorAll('.msg').forEach(m => m.remove());
+const newChat = () => { if (busy) return; session = 's' + Date.now().toString(36); clearThread(); $('welcome').classList.remove('hidden'); closeAll(); q.focus(); };
+$('newBtn').onclick = newChat; $('newBtn2').onclick = newChat; $('closeH').onclick = closeAll;
 
 /* ---------- chat ---------- */
 const q = $('q');
@@ -349,8 +407,10 @@ function addBot() {
 const STAGES_FREE = ['بيدوّر في القوانين', 'بيجهز الرد'];
 const STAGES_PRO = ['بيحلل السؤال', 'بيدوّر في القوانين وملفاتك', 'بيكتب الرأي القانوني', 'بيراجع الاستشهادات'];
 
+const MAP_RE = /(mind\s*-?\s*map|ماي?ند\s*ماب|خريط[ةه]\s*ذهني[ةه]|خط\s*(ال)?(زمني|زمنى|أحداث|احداث)|تايم\s*لاين|timeline|تسلسل\s*(ال)?(أحداث|احداث|زمني))/i;
 async function send() {
   const text = q.value.trim(); if (!text || busy) return;
+  if (MAP_RE.test(text)) return sendMap(text);
   busy = true; q.value = ''; q.style.height = 'auto'; $('send').disabled = true; $('welcome').classList.add('hidden');
   addUser(text);
   const bot = addBot(), body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
@@ -364,6 +424,7 @@ async function send() {
     let data = await r.json(); if (Array.isArray(data)) data = data[0];
     if (data.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
     body.innerHTML = md(data.output || 'مفيش رد.');
+    historyDirty = true;
     if (data.error === 'quota') { body.classList.add('err'); }
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
     const tags = [];
@@ -419,6 +480,225 @@ async function upload(f) {
   loadDocs(); refreshMe();
 }
 async function refreshMe() { try { const r = await api('me'); if (r.ok) applyMe(r); } catch (e) {} }
+
+
+/* ---------- chat history ---------- */
+let historyDirty = true, sessCache = [];
+const sidTime = id => { const n = parseInt(String(id).replace(/^s/, ''), 36); return n > 1.5e12 && n < 4e12 ? n : 0; };
+function dayLabel(t) {
+  if (!t) return 'أقدم';
+  const d = new Date(t), now = new Date(), one = 864e5;
+  const diff = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / one);
+  if (diff === 0) return 'النهارده'; if (diff === 1) return 'امبارح'; if (diff < 7) return 'الأسبوع ده';
+  return d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+}
+$('histBtn').onclick = () => { $('scrim').classList.remove('hidden'); $('hdrawer').classList.remove('hidden'); loadSessions(); };
+async function loadSessions() {
+  const box = $('sessList');
+  if (historyDirty || !sessCache.length) box.innerHTML = '<div class="typing" style="padding:10px"><span class="dots"><i></i><i></i><i></i></span>بيحمّل محادثاتك</div>';
+  try {
+    const r = await api('sessions'); if (!r.ok) throw new Error(r.error);
+    sessCache = (r.sessions || []).sort((a, b) => sidTime(b.id) - sidTime(a.id)); historyDirty = false;
+  } catch (e) { box.innerHTML = '<div class="err" style="font-size:13.5px">مقدرتش أجيب المحادثات، جرّب تاني.</div>'; return; }
+  box.innerHTML = sessCache.length ? '' : '<div style="color:var(--mute);font-size:13.5px;padding:8px 2px">لسه مفيش محادثات قديمة.</div>';
+  let lastDay = null;
+  sessCache.forEach(x => {
+    const t = sidTime(x.id), dl = dayLabel(t);
+    if (dl !== lastDay) { const h = document.createElement('div'); h.className = 'day-t'; h.textContent = dl; box.appendChild(h); lastDay = dl; }
+    const el = document.createElement('div'); el.className = 'sess' + (x.id === session ? ' on' : '');
+    el.innerHTML = '<div class="t"><b></b><small></small></div><button class="del" title="امسح المحادثة">🗑</button>';
+    el.querySelector('b').textContent = x.title || '(بدون عنوان)';
+    el.querySelector('small').textContent = [x.count ? x.count + ' سؤال' : '', x.maps ? x.maps + ' خريطة' : '', t ? new Date(t).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' }) : ''].filter(Boolean).join(' · ');
+    el.onclick = () => openSession(x.id);
+    el.querySelector('.del').onclick = async e => {
+      e.stopPropagation(); if (!confirm('تمسح المحادثة دي نهائي؟')) return;
+      try { await api('delete_session', { session: x.id }); } catch (err) {}
+      if (x.id === session) newChat(); historyDirty = true; loadSessions();
+    };
+    box.appendChild(el);
+  });
+}
+async function openSession(id) {
+  if (busy) return;
+  closeAll(); clearThread(); $('welcome').classList.add('hidden'); session = id;
+  const wait = addBot(); wait.querySelector('.md').innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span>بيفتح المحادثة</div>';
+  try {
+    const r = await api('history', { session: id }); if (!r.ok) throw new Error(r.error);
+    wait.remove();
+    (r.messages || []).forEach(m => {
+      if (m.role === 'user') addUser(m.text);
+      else if (m.role === 'bot') { const b = addBot(); b.querySelector('.md').innerHTML = md(m.text); }
+      else if (m.role === 'map' && m.map) { if (m.map.request) addUser(m.map.request); renderMap(addBot(), m.map); }
+    });
+    if (!r.messages || !r.messages.length) $('welcome').classList.remove('hidden');
+  } catch (e) { wait.querySelector('.md').innerHTML = '<span class="err">مقدرتش أفتح المحادثة دي.</span>'; }
+  scroll();
+}
+
+/* ---------- case mind map + timeline ---------- */
+$('mapBtn').onclick = () => sendMap(q.value.trim());
+async function sendMap(text) {
+  if (busy) return;
+  if (!text && !$('thread').querySelector('.msg')) { q.placeholder = 'اكتب وقائع القضية الأول، وبعدين دوس 🗺️'; q.focus(); return; }
+  busy = true; q.value = ''; q.style.height = 'auto'; $('send').disabled = true; $('welcome').classList.add('hidden');
+  if (text) addUser(text);
+  const bot = addBot(), body = bot.querySelector('.md');
+  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span>بيرسم الخريطة الذهنية والخط الزمني</span></div>';
+  try {
+    const r = await fetch(API.base + '/mindmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sessionId: session, text }) });
+    let d = await r.json(); if (Array.isArray(d)) d = d[0];
+    if (d.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
+    if (typeof d.maps_left === 'number') setMaps(d.maps_left);
+    if (!d.ok || !d.map) {
+      body.innerHTML = md(d.output || 'مقدرتش أعمل الخريطة.'); body.classList.add('err');
+      if (d.error === 'quota' && me && me.user.plan === 'free') { const b = document.createElement('button'); b.className = 'btn ghost'; b.style.marginTop = '8px'; b.textContent = '✦ اعرف عن Pro'; b.onclick = openPro; body.appendChild(b); }
+      return;
+    }
+    renderMap(bot, d.map); historyDirty = true;
+  } catch (e) { body.innerHTML = '<span class="err">حصلت مشكلة في الاتصال. جرّب تاني.</span>'; }
+  finally { busy = false; $('send').disabled = !q.value.trim(); scroll(); }
+}
+
+const MAP_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#db2777', '#65a30d'];
+const KIND = { fact: ['واقعة', '#2563eb'], procedure: ['إجراء', '#9333ea'], deadline: ['ميعاد', '#dc2626'], next: ['خطوة جاية', '#16a34a'] };
+function renderMap(bot, map) {
+  const body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
+  body.innerHTML = '';
+  const card = document.createElement('div'); card.className = 'mapcard';
+  card.innerHTML = '<div class="mhead"><b></b><div class="mtabs"><button class="on" data-v="mm">🧠 الخريطة الذهنية</button><button data-v="tl">🕒 الخط الزمني</button></div></div>' +
+    '<div class="mview" data-p="mm"></div><div class="mview hidden" data-p="tl"></div>' +
+    '<div class="mactions"><button class="btn ghost" data-a="full">⤢ شاشة كاملة</button><button class="btn ghost" data-a="png">⬇ صورة PNG</button><button class="btn ghost" data-a="svg">⬇ SVG</button>' +
+    '<span class="zoom"><button class="btn ghost" data-z="1.25" title="تكبير">＋</button><button class="btn ghost" data-z="0.8" title="تصغير">－</button><button class="btn ghost" data-z="fit" title="على قد الشاشة">⤓</button></span></div>';
+  card.querySelector('b').textContent = '🗺️ ' + (map.title || 'خريطة القضية');
+  const svg = mindmapSVG(map.mindmap || { label: map.title || '' });
+  card.querySelector('[data-p="mm"]').appendChild(svg);
+  card.querySelector('[data-p="tl"]').appendChild(timelineEl(map.timeline || []));
+  if (map.missing && map.missing.length) {
+    const m = document.createElement('div'); m.className = 'missing';
+    m.innerHTML = '<b>⚠️ معلومات ناقصة تفرق في القضية:</b><ul></ul>';
+    map.missing.forEach(x => { const li = document.createElement('li'); li.textContent = x; m.querySelector('ul').appendChild(li); });
+    card.appendChild(m);
+  }
+  card.querySelectorAll('.mtabs button').forEach(b => b.onclick = () => {
+    card.querySelectorAll('.mtabs button').forEach(x => x.classList.toggle('on', x === b));
+    card.querySelectorAll('.mview').forEach(v => v.classList.toggle('hidden', v.dataset.p !== b.dataset.v));
+    card.querySelector('[data-a="png"]').classList.toggle('hidden', b.dataset.v !== 'mm');
+    card.querySelector('[data-a="svg"]').classList.toggle('hidden', b.dataset.v !== 'mm');
+  });
+  const fname = (map.title || 'case-map').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  card.querySelector('[data-a="svg"]').onclick = () => download(new Blob([svgText(svg)], { type: 'image/svg+xml' }), fname + '.svg');
+  card.querySelector('[data-a="png"]').onclick = () => svgToPng(svg, fname + '.png');
+  card.querySelector('[data-a="full"]').onclick = () => {
+    const tlOn = !card.querySelector('[data-p="tl"]').classList.contains('hidden');
+    const f = document.createElement('div'); f.className = 'mfull';
+    f.innerHTML = '<header><b></b><button class="icon-btn">✕</button></header><div class="mview"></div>';
+    f.querySelector('b').textContent = card.querySelector('b').textContent;
+    f.querySelector('.mview').appendChild(tlOn ? timelineEl(map.timeline || []) : svg.cloneNode(true));
+    f.querySelector('button').onclick = () => f.remove();
+    document.body.appendChild(f);
+  };
+  body.appendChild(card);
+  // zoom: start fitted to the card width (phones), never bigger than 100%
+  const nat = +svg.getAttribute('width'), view = card.querySelector('[data-p="mm"]');
+  const fit = () => Math.max(0.4, Math.min(1, (view.clientWidth - 24) / nat));
+  let z = fit(); const setZ = v => { z = Math.max(0.3, Math.min(2.5, v)); svg.style.width = Math.round(nat * z) + 'px'; };
+  setZ(z);
+  card.querySelectorAll('[data-z]').forEach(b => b.onclick = () => setZ(b.dataset.z === 'fit' ? fit() : z * +b.dataset.z));
+  card.querySelectorAll('.mtabs button').forEach(b => b.addEventListener('click', () => card.querySelector('.zoom').classList.toggle('hidden', b.dataset.v !== 'mm')));
+  foot.innerHTML = '<span class="tag">' + (map.timeline || []).length + ' حدث في الخط الزمني</span>';
+}
+
+function timelineEl(items) {
+  const wrap = document.createElement('div'); wrap.className = 'tl';
+  if (!items.length) { wrap.innerHTML = '<div style="color:var(--mute)">مفيش تواريخ كفاية لخط زمني.</div>'; return wrap; }
+  items.forEach(t => {
+    const k = KIND[t.kind] || KIND.fact;
+    const el = document.createElement('div'); el.className = 'tl-i'; el.style.setProperty('--k', k[1]);
+    el.innerHTML = '<span class="tl-d"></span><span class="tl-k"></span><div class="tl-e"></div>';
+    el.querySelector('.tl-d').textContent = t.date || 'غير محدد';
+    el.querySelector('.tl-k').textContent = k[0];
+    el.querySelector('.tl-e').textContent = t.event;
+    wrap.appendChild(el);
+  });
+  return wrap;
+}
+
+/* tidy RTL tree: root on the right, branches grow to the left */
+const MEASURE = document.createElement('canvas').getContext('2d');
+function wrapText(text, font, maxW) {
+  MEASURE.font = font; const words = String(text).split(/\s+/); const lines = []; let cur = '';
+  words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (MEASURE.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; });
+  if (cur) lines.push(cur);
+  return { lines, w: Math.max(...lines.map(l => MEASURE.measureText(l).width)) };
+}
+function mindmapSVG(root) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const css = getComputedStyle(document.documentElement);
+  const ink = css.getPropertyValue('--ink').trim() || '#17181b', panel = css.getPropertyValue('--panel').trim() || '#fff', brand = css.getPropertyValue('--brand').trim() || '#14532d', brandInk = css.getPropertyValue('--brand-ink').trim() || '#fff';
+  const FONT = '"IBM Plex Sans Arabic", system-ui, sans-serif';
+  const LH = 19, PADX = 12, PADY = 8, VGAP = 10, HGAP = 46;
+  const fontFor = d => (d === 0 ? '700 15px ' : d === 1 ? '600 14px ' : '400 13px ') + FONT;
+  const maxW = d => d === 0 ? 170 : d === 1 ? 160 : 210;
+  // measure
+  (function m(n, d, color) {
+    n.d = d; n.color = d === 0 ? brand : color;
+    const t = wrapText(n.label, fontFor(d), maxW(d)); n.lines = t.lines;
+    n.w = Math.ceil(t.w) + PADX * 2; n.h = t.lines.length * LH + PADY * 2;
+    (n.children || []).forEach((c, i) => m(c, d + 1, d === 0 ? MAP_COLORS[i % MAP_COLORS.length] : color));
+  })(root, 0, brand);
+  const colW = []; (function cw(n) { colW[n.d] = Math.max(colW[n.d] || 0, n.w); (n.children || []).forEach(cw); })(root);
+  const colX = []; let acc = 0; colW.forEach((w, i) => { colX[i] = acc; acc += w + HGAP; });  // distance from the right edge
+  const totalW = acc - HGAP + 20;
+  // vertical layout
+  (function sz(n) { const k = n.children || []; k.forEach(sz); const kh = k.reduce((a, c) => a + c.sh, 0) + VGAP * Math.max(0, k.length - 1); n.sh = Math.max(n.h, kh); })(root);
+  (function pos(n, top) {
+    n.y = top + n.sh / 2 - n.h / 2;
+    n.x = totalW - 10 - colX[n.d] - n.w;      // box left; right-aligned to its column
+    if (n.d > 0) n.x = totalW - 10 - colX[n.d] - colW[n.d] + (colW[n.d] - n.w);
+    const k = n.children || []; const kh = k.reduce((a, c) => a + c.sh, 0) + VGAP * Math.max(0, k.length - 1);
+    let y = top + (n.sh - kh) / 2; k.forEach(c => { pos(c, y); y += c.sh + VGAP; });
+  })(root, 10);
+  const totalH = root.sh + 20;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('xmlns', NS); svg.setAttribute('width', totalW); svg.setAttribute('height', totalH); svg.setAttribute('viewBox', '0 0 ' + totalW + ' ' + totalH);
+  svg.setAttribute('font-family', FONT); svg.setAttribute('direction', 'rtl');
+  const bg = document.createElementNS(NS, 'rect'); bg.setAttribute('width', totalW); bg.setAttribute('height', totalH); bg.setAttribute('fill', panel); svg.appendChild(bg);
+  const links = document.createElementNS(NS, 'g'), boxes = document.createElementNS(NS, 'g'); svg.append(links, boxes);
+  (function draw(n) {
+    (n.children || []).forEach(c => {
+      const x1 = n.x, y1 = n.y + n.h / 2, x2 = c.x + c.w, y2 = c.y + c.h / 2, mx = (x1 + x2) / 2;
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+      p.setAttribute('fill', 'none'); p.setAttribute('stroke', c.color); p.setAttribute('stroke-width', n.d === 0 ? 2.5 : 1.6); p.setAttribute('stroke-opacity', .75);
+      links.appendChild(p); draw(c);
+    });
+    const g = document.createElementNS(NS, 'g');
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', n.x); r.setAttribute('y', n.y); r.setAttribute('width', n.w); r.setAttribute('height', n.h); r.setAttribute('rx', n.d === 2 ? 8 : 11);
+    const solid = n.d <= 1;
+    r.setAttribute('fill', solid ? n.color : panel); r.setAttribute('stroke', n.color); r.setAttribute('stroke-width', solid ? 0 : 1.4);
+    if (n.d >= 3) { r.setAttribute('fill', 'none'); r.setAttribute('stroke-dasharray', '3 3'); }
+    g.appendChild(r);
+    n.lines.forEach((l, i) => {
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', n.x + n.w - PADX); t.setAttribute('y', n.y + PADY + LH * i + LH * .74);
+      t.setAttribute('text-anchor', 'start'); t.setAttribute('direction', 'rtl');
+      t.setAttribute('font-size', n.d === 0 ? 15 : n.d === 1 ? 14 : 13); t.setAttribute('font-weight', n.d === 0 ? 700 : n.d === 1 ? 600 : 400);
+      t.setAttribute('fill', solid ? (n.d === 0 ? brandInk : '#ffffff') : ink);
+      t.textContent = l; g.appendChild(t);
+    });
+    boxes.appendChild(g);
+  })(root);
+  return svg;
+}
+const svgText = svg => '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
+function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+function svgToPng(svg, name) {
+  const w = +svg.getAttribute('width'), h = +svg.getAttribute('height'), k = 2;
+  const img = new Image();
+  img.onload = () => { const c = document.createElement('canvas'); c.width = w * k; c.height = h * k; const x = c.getContext('2d'); x.scale(k, k); x.drawImage(img, 0, 0); c.toBlob(b => download(b, name), 'image/png'); };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText(svg));
+}
 
 /* ---------- boot ---------- */
 (async () => {

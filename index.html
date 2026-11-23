@@ -95,7 +95,16 @@ input,textarea{font:inherit;color:inherit}
 .md hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 .md blockquote{margin:8px 0;padding:8px 14px;border-right:3px solid var(--brand);background:var(--brand-soft);border-radius:8px}
 .md code{background:var(--line);padding:1px 6px;border-radius:6px}
-.foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.rate{display:inline-flex;gap:2px;margin-inline-start:auto;opacity:.55;transition:opacity .2s}
+.msg.b:hover .rate,.rate:focus-within,.rate.voted{opacity:1}
+.rate button{width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--mute);display:grid;place-items:center;padding:0;transition:background .15s,color .15s,transform .15s}
+.rate button:hover{background:var(--line);color:var(--ink2)}
+.rate button:active{transform:scale(.88)}
+.rate button.on[data-r="1"]{color:var(--brand);background:var(--brand-soft)}
+.rate button.on[data-r="-1"]{color:var(--danger);background:var(--danger-soft)}
+.rate button.on svg{fill:currentColor;fill-opacity:.18}
+@media (hover:none){.rate{opacity:.8}}
 .tag{font-size:11.5px;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:1px 9px}
 .tag.ok{color:var(--brand);border-color:var(--brand-soft);background:var(--brand-soft)}
 .err{color:var(--danger)}
@@ -433,6 +442,7 @@ async function send() {
     if (data.review === 'fixed') tags.push('<span class="tag ok">✓ اتراجع واتصحح</span>');
     if (data.ok) tags.push('<span class="tag">' + secs + ' ث</span>');
     foot.innerHTML = tags.join('');
+    if (data.ok && data.output) addRate(bot, { question: text, answer: String(data.output).trim() });
     if (typeof data.remaining === 'number' && me) setUsage(me.usage.limit - data.remaining, me.usage.limit);
   } catch (e) {
     body.innerHTML = '<span class="err">حصلت مشكلة في الاتصال. جرّب تاني.</span>';
@@ -482,6 +492,25 @@ async function upload(f) {
 async function refreshMe() { try { const r = await api('me'); if (r.ok) applyMe(r); } catch (e) {} }
 
 
+
+/* ---------- 👍 / 👎 on answers ---------- */
+const THUMB = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3zm0 0 4-8a3 3 0 0 1 3 3v4h5.5a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 18.1 21H7"/></svg>';
+function addRate(bot, o) {
+  if (!o.answer) return;
+  const foot = bot.querySelector('.foot'), box = document.createElement('span');
+  box.className = 'rate';
+  box.innerHTML = '<button data-r="1" title="رد مفيد" aria-label="رد مفيد">' + THUMB + '</button>' +
+                  '<button data-r="-1" title="رد مش مفيد" aria-label="رد مش مفيد">' + THUMB.replace('<svg', '<svg style="transform:rotate(180deg)"') + '</button>';
+  let cur = o.rating || 0;
+  const paint = () => { box.querySelectorAll('button').forEach(b => { const on = +b.dataset.r === cur; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); box.classList.toggle('voted', cur !== 0); };
+  box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+    const prev = cur; cur = cur === +b.dataset.r ? 0 : +b.dataset.r; paint();
+    try { const r = await api('feedback', { session: o.session || session, question: o.question || '', answer: o.answer, rating: cur, kind: o.kind || 'chat' }); if (!r.ok) throw 0; }
+    catch (e) { cur = prev; paint(); }
+  });
+  paint(); foot.appendChild(box);
+}
+
 /* ---------- chat history ---------- */
 let historyDirty = true, sessCache = [];
 const sidTime = id => { const n = parseInt(String(id).replace(/^s/, ''), 36); return n > 1.5e12 && n < 4e12 ? n : 0; };
@@ -525,10 +554,15 @@ async function openSession(id) {
   try {
     const r = await api('history', { session: id }); if (!r.ok) throw new Error(r.error);
     wait.remove();
+    let lastQ = '';
     (r.messages || []).forEach(m => {
-      if (m.role === 'user') addUser(m.text);
-      else if (m.role === 'bot') { const b = addBot(); b.querySelector('.md').innerHTML = md(m.text); }
-      else if (m.role === 'map' && m.map) { if (m.map.request) addUser(m.map.request); renderMap(addBot(), m.map); }
+      if (m.role === 'user') { addUser(m.text); lastQ = m.text; }
+      else if (m.role === 'bot') { const b = addBot(); b.querySelector('.md').innerHTML = md(m.text); addRate(b, { session: id, question: lastQ, answer: m.text, rating: m.rating }); }
+      else if (m.role === 'map' && m.map) {
+        if (m.map.request) addUser(m.map.request);
+        const b = addBot(); renderMap(b, m.map);
+        if (m.map_id) addRate(b, { session: id, kind: 'map', question: m.map.request || '', answer: 'map:' + m.map_id, rating: m.rating });
+      }
     });
     if (!r.messages || !r.messages.length) $('welcome').classList.remove('hidden');
   } catch (e) { wait.querySelector('.md').innerHTML = '<span class="err">مقدرتش أفتح المحادثة دي.</span>'; }
@@ -555,6 +589,7 @@ async function sendMap(text) {
       return;
     }
     renderMap(bot, d.map); historyDirty = true;
+    if (d.map_id) addRate(bot, { kind: 'map', question: text, answer: 'map:' + d.map_id });
   } catch (e) { body.innerHTML = '<span class="err">حصلت مشكلة في الاتصال. جرّب تاني.</span>'; }
   finally { busy = false; $('send').disabled = !q.value.trim(); scroll(); }
 }

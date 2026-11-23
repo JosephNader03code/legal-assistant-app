@@ -84,7 +84,7 @@ begin
     j := sl_user_json(v_token);
     if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
     return jsonb_set(j, '{usage,maps}', sl_maps_usage(j));   -- history_maps.sql
-  elsif p_action in ('sessions', 'history', 'delete_session') then
+  elsif p_action in ('sessions', 'history', 'delete_session', 'feedback') then
     j := sl_user_json(v_token);
     if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
     return sl_api_ext(p_action, p, j);                         -- history_maps.sql

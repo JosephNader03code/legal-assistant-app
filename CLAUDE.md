@@ -20,6 +20,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/auth.sql`: users, sessions, plans, quotas, `sl_api`, `sl_consume`, `sl_can_upload`.
 - `docs/sql/routing_cache.sql`: model routing (`sl_route`, `sl_take`, `sl_lite`) and the semantic cache (`sl_cache_get` / `sl_cache_put`).
 - `docs/sql/case_files.sql`: case-file extraction storage and the agent tools (`sl_case_facts`, `sl_read_doc`, `sl_keyword_search`).
+- `docs/sql/feedback.sql`: 👍/👎 votes in `sl_feedback` (question, answer, rating, plan), one vote per answer (md5). Doubles as the future fine-tuning dataset: `select question, answer from sl_feedback where rating = 1 and kind = 'chat'`.
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
 - `docs/ws_fetch.py`: downloads law texts from Arabic Wikisource.
 - `docs/clean_law.py`: normalizes Arabic law text and splits it into upload parts at article boundaries.
@@ -52,7 +53,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 ## Architecture
 
 ```
-Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session
+Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session/feedback
                      ──POST /webhook/Chat────▶ Main workflow (chat)
                      ──POST /webhook/mindmap─▶ Main workflow (case mind map + timeline: token, sessionId, text)
                      ──POST /webhook/upload──▶ Main workflow (upload, multipart: data, filename, contentType, token, target=mine|public)
@@ -92,7 +93,7 @@ Response JSON: `{ok, output, plan, remaining, intent?, legal_area?, review?: pas
 
 `Map Webhook` (path `mindmap`) → `Map Auth` (`sl_map_take(token, sessionId, text)`: auth, daily map quota, builds the context from the last 12 chat turns + the user's text + for Pro the 2 latest `sl_doc_profiles` summaries, max 12k chars) → `Map Allowed?` → `Map Builder` (Groq `gpt-oss-120b`, fallback OpenRouter; strict JSON) → `Map Parse` (sanitizes / limits size) → `Map Save` (`sl_map_finish`: saves to `sl_maps`, or refunds the quota when generation failed) → `Respond Map`.
 
-Response: `{ok, map: {request, title, mindmap: {label, children[]}, timeline: [{date, event, kind: fact|procedure|deadline|next}], missing[]}, maps_left}`. Quota: `sl_plans.daily_maps` (free 2 / pro 30 per day, Cairo time; admins unlimited). The UI draws the map as SVG itself (no library) and offers PNG/SVG download. Messages containing "mind map / خريطة ذهنية / خط زمني / تايم لاين" are routed here automatically.
+Response: `{ok, map: {request, title, mindmap: {label, children[]}, timeline: [{date, event, kind: fact|procedure|deadline|next}], missing[]}, maps_left}`. Quota: `sl_plans.daily_maps` (free 2 / pro 8 per day, Cairo time; admins unlimited). The UI draws the map as SVG itself (no library) and offers PNG/SVG download. Messages containing "mind map / خريطة ذهنية / خط زمني / تايم لاين" are routed here automatically.
 
 ### Chat history
 
@@ -215,7 +216,7 @@ manshurat.org resets connections from the container.
 5. UI:
    - Show extraction status and summary for each file (`sl_doc_profiles`); this needs a new `sl_api` action `profile`.
    - Delete-file action.
-   - Done (Nov 2026): chat-history drawer, case mind map + timeline.
+   - Done (Nov 2026): chat-history drawer, case mind map + timeline, 👍/👎 on every answer and map.
 6. Payments / self-serve Pro upgrade (currently manual SQL).
 7. OR follow-ups once there's real usage data:
    - Tune plan limits (LP on `sl_usage`).

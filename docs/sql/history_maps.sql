@@ -8,7 +8,7 @@ create index if not exists n8n_chat_histories_session_pattern
 -- daily mind-map quota per plan (free = 2/day). Change with: update sl_plans set daily_maps = N where plan = 'free';
 alter table sl_plans add column if not exists daily_maps int not null default 2;
 update sl_plans set daily_maps = 2 where plan = 'free';
-update sl_plans set daily_maps = 30 where plan = 'pro';
+update sl_plans set daily_maps = 8 where plan = 'pro';
 
 create table if not exists sl_feature_usage (
   user_id uuid not null references sl_users(id) on delete cascade,
@@ -73,7 +73,9 @@ begin
         select jsonb_agg(m order by m->>'k') from (
           select jsonb_build_object('k', lpad(h.id::text, 12, '0') || 'a',
                                     'role', case when h.message->>'type' = 'human' then 'user' else 'bot' end,
-                                    'text', sl_clean_msg(h.message->>'content')) m
+                                    'text', sl_clean_msg(h.message->>'content'),
+                                    'rating', (select f.rating from sl_feedback f where f.user_id = uid::uuid and f.session_id = key
+                                                and f.answer_hash = md5(left(sl_clean_msg(h.message->>'content'), 20000)))) m
             from n8n_chat_histories h
            where h.session_id = key
              and h.message->>'type' in ('human', 'ai')
@@ -81,8 +83,12 @@ begin
              and coalesce(h.message->>'content', '') <> ''
           union all
           select jsonb_build_object('k', lpad(mp.after_msg_id::text, 12, '0') || 'b' || lpad(mp.id::text, 12, '0'),
-                                    'role', 'map', 'map', mp.data)
+                                    'role', 'map', 'map', mp.data,
+                                    'rating', (select f.rating from sl_feedback f where f.user_id = uid::uuid and f.session_id = key
+                                                and f.answer_hash = md5(left('map:' || mp.id, 20000))), 'map_id', mp.id)
             from sl_maps mp where mp.session_id = key) q), '[]'::jsonb));
+  elsif p_action = 'feedback' then
+    return sl_feedback_set(j, p);                              -- feedback.sql
   elsif p_action = 'delete_session' then
     if sid = '' then return jsonb_build_object('ok', false, 'error', 'missing session'); end if;
     delete from n8n_chat_histories where session_id = key;

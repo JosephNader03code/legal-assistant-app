@@ -12,6 +12,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 | n8n instance | https://joe03.app.n8n.cloud |
 | Main workflow "Agents to Apps - RAG Systems" | https://joe03.app.n8n.cloud/workflow/Urs8CLRcjtJbkZ8G |
 | Search tool workflow "Smart Lawyer - Search Tool" | https://joe03.app.n8n.cloud/workflow/ySmFhCajtWfNI3XG |
+| Embed backfill workflow "Smart Lawyer - Embed Backfill" (**not activated yet**: owner decides) | https://joe03.app.n8n.cloud/workflow/B8VdNmu5zrqrB2uu |
 | Website workflow "Smart Lawyer - Test Website" | https://joe03.app.n8n.cloud/workflow/sPTOi4r3hCBgsbvW |
 | Supabase project | https://supabase.com/dashboard/project/rnjnozbptnqeskkyjqae |
 
@@ -27,6 +28,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
 - `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
+- `docs/laws/`: cleaned texts of laws added without the upload webhook. `docs/insert_law_sql.py FILE NAME SOURCE` splits a text into 1800/150 chunks and prints the SQL that inserts them into `documents` with **no embedding** (`metadata.embedding_pending`); keyword search finds them at once, and the Embed Backfill workflow fills the vectors when Gemini has quota.
 - `docs/ws_fetch.py`: downloads law texts from Arabic Wikisource.
 - `docs/clean_law.py`: normalizes Arabic law text and splits it into upload parts at article boundaries.
 
@@ -182,7 +184,7 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 - **`library-bot@legal-assistant.local`:** admin, used to upload the library. Its password only existed in the old session, so reset it with SQL if you need it.
 - There are 5 other real user accounts.
 
-## Law library (921 chunks, `userId=public`)
+## Law library (1008 chunks, `userId=public`)
 
 | fileName | Source | Notes |
 |---|---|---|
@@ -194,14 +196,16 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 | قانون إيجار الأماكن رقم 49 لسنة 1977 | ar.wikisource | |
 | قانون التأمينات الاجتماعية والمعاشات رقم 148 لسنة 2019 | ar.wikisource | |
 | قانون البناء الموحد رقم 119 لسنة 2008 | ar.wikisource | |
+| قانون رقم 164 لسنة 2025 - الإيجار القديم (…) | lawyeregypt.net/?p=31926 | 10 articles, added Nov 2026, embeddings pending |
+| قانون رقم 4 لسنة 1996 - الإيجار الجديد (…) وتعديله بالقانون 165 لسنة 2025 | lawyeregypt.net posts 3731 + 31825 | includes the explanatory memo; embeddings pending |
+| قوانين الأحوال الشخصية 25 لسنة 1920 و25 لسنة 1929 المعدلة بالقانون 100 لسنة 1985 | lawyeregypt.net post 5755 | the page ends with "يتبع" (may be incomplete); embeddings pending |
+| دستور جمهورية مصر العربية 2014 (النص الأصلي قبل تعديلات 2019) | ar.wikisource | 247 articles, **without the 2019 amendments**; embeddings pending |
 
-**Missing (TODO):** these are the most important ones to add.
-- Old-rent law 164/2025: lawyeregypt.net/?p=31926 links to its PDF page.
-- Rent law 4/1996.
-- Personal status laws 25/1920 and 25/1929 (manshurat.org/node/12369).
-- The new Criminal Procedure Law.
-- Constitution 2014.
+**Missing (TODO):**
+- The new Criminal Procedure Law 174/2025 (+ amendment 160/2026): only as a broken download on lawyeregypt.net, not on Wikisource. Needs the official PDF (upload it from the documents drawer as admin → public library).
+- The 2019 constitutional amendments.
 - An up-to-date penal code (manshurat.org/node/14677, amended to 2021).
+- Wikisource rate-limits this container's IP quickly (HTTP 429 "too many requests"); space calls ≥ 10 s.
 
 manshurat.org resets connections from the container.
 

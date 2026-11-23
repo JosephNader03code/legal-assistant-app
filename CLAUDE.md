@@ -12,7 +12,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 | n8n instance | https://joe03.app.n8n.cloud |
 | Main workflow "Agents to Apps - RAG Systems" | https://joe03.app.n8n.cloud/workflow/Urs8CLRcjtJbkZ8G |
 | Search tool workflow "Smart Lawyer - Search Tool" | https://joe03.app.n8n.cloud/workflow/ySmFhCajtWfNI3XG |
-| Embed backfill workflow "Smart Lawyer - Embed Backfill" (**not activated yet**: owner decides) | https://joe03.app.n8n.cloud/workflow/B8VdNmu5zrqrB2uu |
+| Embed backfill workflow "Smart Lawyer - Embed Backfill" (active, hourly) | https://joe03.app.n8n.cloud/workflow/B8VdNmu5zrqrB2uu |
 | Website workflow "Smart Lawyer - Test Website" | https://joe03.app.n8n.cloud/workflow/sPTOi4r3hCBgsbvW |
 | Supabase project | https://supabase.com/dashboard/project/rnjnozbptnqeskkyjqae |
 

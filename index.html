@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مستشارك القانوني</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#17181b; --ink2:#4a4d55; --mute:#8a8d95; --line:#e7e5df;
+  --brand:#14532d; --brand-ink:#ffffff; --brand-soft:#e7f2ea; --gold:#b7791f; --gold-soft:#fbf3e4;
+  --danger:#b42318; --danger-soft:#fdecea; --user:#14532d; --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1012; --panel:#17181b; --ink:#ececec; --ink2:#c2c4c9; --mute:#8b8e96; --line:#2a2c31;
+  --brand:#4ade80; --brand-ink:#0b1f12; --brand-soft:#16261b; --gold:#f0b45a; --gold-soft:#2a2214;
+  --danger:#f97066; --danger-soft:#2d1614; --user:#1f3d2a; --shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.75 "IBM Plex Sans Arabic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* ---------- auth ---------- */
+.auth{min-height:100%;display:grid;grid-template-columns:1.1fr 1fr}
+@media (max-width:900px){.auth{grid-template-columns:1fr}.auth-side{display:none}}
+.auth-side{background:linear-gradient(160deg,#0f3d22,#14532d 55%,#1d6b3c);color:#eaf5ee;padding:56px;display:flex;flex-direction:column;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px}
+.logo-mark{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.14);display:grid;place-items:center;font-size:19px}
+.auth-side h1{font-size:38px;line-height:1.35;margin:0 0 14px;font-weight:700}
+.auth-side p{opacity:.85;max-width:440px;margin:0}
+.tiers{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:36px;max-width:520px}
+.tier{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:16px}
+.tier b{display:block;font-size:15px;margin-bottom:6px}
+.tier ul{margin:0;padding-right:18px;font-size:13.5px;opacity:.9}
+.auth-main{display:grid;place-items:center;padding:24px 16px}
+.auth-card{width:100%;max-width:400px}
+.auth-card .logo{color:var(--ink);margin-bottom:28px}
+.auth-card .logo-mark{background:var(--brand-soft)}
+.auth-card h2{font-size:24px;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 22px;font-size:14px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--line);border-radius:12px;padding:4px;margin-bottom:20px}
+.tabs button{border:0;background:transparent;padding:9px;border-radius:9px;color:var(--ink2);font-weight:500}
+.tabs button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--ink2)}
+.field input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);outline:none;transition:border .15s}
+.field input:focus{border-color:var(--brand)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 18px;font-weight:600;background:var(--brand);color:var(--brand-ink);transition:opacity .15s}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.block{width:100%}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line);font-weight:500;padding:8px 12px}
+.alert{border-radius:10px;padding:10px 12px;font-size:13.5px;margin-bottom:14px;background:var(--danger-soft);color:var(--danger)}
+
+/* ---------- app ---------- */
+.app{height:100%;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.top .logo{font-size:17px}.top .logo-mark{width:32px;height:32px;background:var(--brand-soft)}
+.top-r{display:flex;align-items:center;gap:8px}
+.badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--line);color:var(--ink2)}
+.badge.pro{background:var(--gold-soft);color:var(--gold)}
+.usage{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mute)}
+.meter{width:70px;height:6px;border-radius:9px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--brand);border-radius:9px;transition:width .3s}
+@media (max-width:640px){.usage span{display:none}.top{padding:10px 14px}.hide-sm{display:none}}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--brand-ink);border:0;font-weight:700}
+.menu{position:absolute;left:16px;top:56px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:220px;padding:6px;z-index:20}
+.menu .who{padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:4px;font-size:13px}
+.menu .who b{display:block;font-size:14px}
+.menu button{display:block;width:100%;text-align:right;border:0;background:transparent;padding:9px 12px;border-radius:9px;color:var(--ink)}
+.menu button:hover{background:var(--bg)}
+
+.main{flex:1;overflow-y:auto}
+.thread{max-width:780px;margin:0 auto;padding:28px 20px 12px}
+.welcome{text-align:center;padding:9vh 0 20px}
+.welcome .logo-mark{width:56px;height:56px;font-size:28px;margin:0 auto 16px;background:var(--brand-soft);border-radius:16px}
+.welcome h2{font-size:26px;margin:0 0 6px}
+.welcome p{color:var(--mute);margin:0 0 26px}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:right}
+@media (max-width:640px){.chips{grid-template-columns:1fr}}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px 14px;color:var(--ink2);font-size:14px;text-align:right;transition:border .15s}
+.chip:hover{border-color:var(--brand)}
+.msg{display:flex;margin:0 0 22px}
+.msg.u{justify-content:flex-start}
+.msg.u .bubble{background:var(--user);color:#fff;border-radius:18px 18px 4px 18px;padding:10px 16px;max-width:82%;white-space:pre-wrap}
+.msg.b .bubble{width:100%}
+.msg.b .who{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:6px}
+.msg.b .who .logo-mark{width:24px;height:24px;font-size:13px;border-radius:7px;background:var(--brand-soft)}
+.md{color:var(--ink)}
+.md p{margin:0 0 10px}.md ul,.md ol{margin:0 0 10px;padding-right:22px}.md li{margin:2px 0}
+.md h1,.md h2,.md h3,.md h4{font-size:16px;margin:16px 0 6px}
+.md hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.md blockquote{margin:8px 0;padding:8px 14px;border-right:3px solid var(--brand);background:var(--brand-soft);border-radius:8px}
+.md code{background:var(--line);padding:1px 6px;border-radius:6px}
+.foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:11.5px;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:1px 9px}
+.tag.ok{color:var(--brand);border-color:var(--brand-soft);background:var(--brand-soft)}
+.err{color:var(--danger)}
+.typing{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:14px}
+.dots{display:inline-flex;gap:4px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--brand);animation:b 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+
+.composer-wrap{padding:10px 20px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%)}
+.composer{max-width:780px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:8px 8px 8px 8px;box-shadow:var(--shadow)}
+.composer:focus-within{border-color:var(--brand)}
+.composer textarea{flex:1;border:0;outline:none;resize:none;background:transparent;padding:8px 10px;max-height:180px;min-height:24px;line-height:1.6}
+.send{width:40px;height:40px;border-radius:12px;border:0;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;flex:none}
+.send:disabled{opacity:.4}
+.icon-btn{width:40px;height:40px;border-radius:12px;border:0;background:transparent;color:var(--ink2);display:grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--bg)}
+.hint{max-width:780px;margin:6px auto 0;text-align:center;font-size:12px;color:var(--mute)}
+
+/* drawer + modal */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:30}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(420px,100%);background:var(--panel);z-index:31;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.drawer header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.drawer header h3{margin:0;font-size:17px}
+.drawer .body{padding:16px 20px;overflow-y:auto;flex:1}
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--ink2);cursor:pointer;transition:all .15s}
+.drop.on,.drop:hover{border-color:var(--brand);background:var(--brand-soft)}
+.drop small{display:block;color:var(--mute);margin-top:4px}
+.check{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-top:10px;color:var(--ink2)}
+.section-t{font-size:13px;color:var(--mute);font-weight:600;margin:20px 0 8px}
+.doc{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;font-size:14px}
+.doc span:last-child{color:var(--mute);font-size:12px}
+.status{font-size:13.5px;margin-top:10px}
+.modal{position:fixed;z-index:31;top:50%;left:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 32px));background:var(--panel);border-radius:18px;padding:26px;box-shadow:var(--shadow)}
+.modal h3{margin:0 0 6px;font-size:20px}
+.modal ul{padding-right:20px;color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH ================= -->
+<section class="auth hidden" id="authView">
+  <div class="auth-side">
+    <div class="logo"><div class="logo-mark">⚖️</div>مستشارك القانوني</div>
+    <div>
+      <h1>اسأل في القانون المصري<br>وخد إجابة واضحة بمصدرها</h1>
+      <p>فريق من الـ AI agents بيدوّر في نصوص القوانين، ويراجع الإجابة قبل ما توصلك.</p>
+      <div class="tiers">
+        <div class="tier"><b>مجاني · للناس</b><ul><li>إجابات بسيطة وسريعة</li><li>من مكتبة القوانين</li><li>20 سؤال في اليوم</li></ul></div>
+        <div class="tier"><b>Pro · للمحامين ✦</b><ul><li>تحليل قانوني بالمصادر</li><li>ارفع ملفات قضاياك</li><li>مراجعة الاستشهادات</li></ul></div>
+      </div>
+    </div>
+    <small style="opacity:.6">المعلومات للاسترشاد ولا تغني عن استشارة محامٍ.</small>
+  </div>
+  <div class="auth-main">
+    <div class="auth-card">
+      <div class="logo"><div class="logo-mark">⚖️</div>مستشارك القانوني</div>
+      <h2 id="authTitle">أهلاً بيك تاني</h2>
+      <p class="sub" id="authSub">سجّل دخول عشان تكمل</p>
+      <div class="tabs"><button id="tabLogin" class="on">تسجيل دخول</button><button id="tabSignup">حساب جديد</button></div>
+      <div class="alert hidden" id="authErr"></div>
+      <form id="authForm" autocomplete="on">
+        <div class="field hidden" id="nameField"><label>الاسم</label><input id="name" autocomplete="name"></div>
+        <div class="field"><label>الإيميل</label><input id="email" type="email" required autocomplete="email" dir="ltr"></div>
+        <div class="field"><label>الباسورد</label><input id="password" type="password" required minlength="8" autocomplete="current-password" dir="ltr"></div>
+        <button class="btn block" id="authBtn" type="submit">دخول</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ================= APP ================= -->
+<section class="app hidden" id="appView">
+  <header class="top">
+    <div class="logo"><div class="logo-mark">⚖️</div><span class="hide-sm">مستشارك القانوني</span></div>
+    <div class="top-r">
+      <div class="usage" title="رسايل النهارده"><span id="usageTxt"></span><div class="meter"><i id="usageBar"></i></div></div>
+      <span class="badge" id="planBadge">مجاني</span>
+      <button class="btn ghost" id="docsBtn">📄 <span class="hide-sm">المستندات</span></button>
+      <button class="btn ghost" id="newBtn" title="محادثة جديدة">＋ <span class="hide-sm">جديدة</span></button>
+      <button class="avatar" id="avatar"></button>
+    </div>
+    <div class="menu hidden" id="menu">
+      <div class="who"><b id="mName"></b><span id="mEmail" style="color:var(--mute)"></span></div>
+      <button id="upgradeMenu">✦ الترقية لـ Pro</button>
+      <button id="logoutBtn">تسجيل خروج</button>
+    </div>
+  </header>
+
+  <main class="main" id="main">
+    <div class="thread" id="thread">
+      <div class="welcome" id="welcome">
+        <div class="logo-mark">⚖️</div>
+        <h2 id="hello">أهلاً 👋</h2>
+        <p id="helloSub">اسأل أي سؤال قانوني بالعامية</p>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="composer-wrap">
+    <div class="composer">
+      <textarea id="q" rows="1" placeholder="اكتب سؤالك هنا..."></textarea>
+      <button class="send" id="send" title="إرسال" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+      </button>
+    </div>
+    <div class="hint">الإجابات للاسترشاد ومش بديل عن محامي.</div>
+  </div>
+</section>
+
+<!-- docs drawer -->
+<div class="scrim hidden" id="scrim"></div>
+<aside class="drawer hidden" id="drawer">
+  <header><h3>📄 المستندات</h3><button class="icon-btn" id="closeDrawer">✕</button></header>
+  <div class="body">
+    <div id="uploadBox">
+      <div class="drop" id="drop">اسحب الملف هنا أو دوس للاختيار<small>PDF · TXT · CSV</small></div>
+      <input type="file" id="file" accept=".pdf,.txt,.csv" hidden>
+      <label class="check hidden" id="publicWrap"><input type="checkbox" id="toPublic"> ارفعه في مكتبة القوانين العامة (أدمن)</label>
+      <div class="status" id="upStatus"></div>
+    </div>
+    <div class="section-t">ملفاتك</div><div id="mine"></div>
+    <div class="section-t">مكتبة القوانين العامة</div><div id="library"></div>
+  </div>
+</aside>
+
+<!-- pro modal -->
+<div class="modal hidden" id="proModal">
+  <h3>✦ Pro للمحامين</h3>
+  <p class="sub" style="margin:0">النسخة الكاملة لفريق الـ agents:</p>
+  <ul>
+    <li>3 agents: فرز السؤال، خبير قانوني، ومراجع للاستشهادات</li>
+    <li>ارفع ملفات قضاياك وعقودك واسأل فيها</li>
+    <li>300 سؤال في اليوم</li>
+  </ul>
+  <p style="font-size:14px;color:var(--ink2)">الاشتراك أونلاين قريب. للتفعيل دلوقتي تواصل مع الإدارة.</p>
+  <button class="btn block" id="closeModal">تمام</button>
+</div>
+
+<script>
+const API = (() => {
+  const o = location.origin && location.origin !== 'null' && location.origin.includes('n8n') ? location.origin : 'https://joe03.app.n8n.cloud';
+  return { base: o + '/webhook', };
+})();
+const $ = id => document.getElementById(id);
+
+/* token storage: localStorage when allowed, else URL hash (sandboxed page) */
+const store = {
+  get() { try { const v = localStorage.getItem('sl_token'); if (v) return v; } catch (e) {} const m = location.hash.match(/s=([a-f0-9]{64})/); return m ? m[1] : null; },
+  set(t) { let ok = false; try { localStorage.setItem('sl_token', t); ok = true; } catch (e) {} if (!ok) history.replaceState(null, '', '#s=' + t); },
+  clear() { try { localStorage.removeItem('sl_token'); } catch (e) {} history.replaceState(null, '', location.pathname); }
+};
+let token = store.get(), me = null, session = 's' + Date.now().toString(36), busy = false;
+
+async function api(action, payload = {}) {
+  const r = await fetch(API.base + '/sl-api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...payload, token }) });
+  return r.json();
+}
+
+/* ---------- auth ---------- */
+let mode = 'login';
+function setMode(m) {
+  mode = m;
+  $('tabLogin').classList.toggle('on', m === 'login'); $('tabSignup').classList.toggle('on', m === 'signup');
+  $('nameField').classList.toggle('hidden', m === 'login');
+  $('authTitle').textContent = m === 'login' ? 'أهلاً بيك تاني' : 'اعمل حساب مجاني';
+  $('authSub').textContent = m === 'login' ? 'سجّل دخول عشان تكمل' : 'ابدأ في أقل من دقيقة';
+  $('authBtn').textContent = m === 'login' ? 'دخول' : 'إنشاء الحساب';
+  $('password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('authErr').classList.add('hidden');
+}
+$('tabLogin').onclick = () => setMode('login'); $('tabSignup').onclick = () => setMode('signup');
+$('authForm').onsubmit = async e => {
+  e.preventDefault(); $('authBtn').disabled = true; $('authErr').classList.add('hidden');
+  try {
+    const r = await api(mode, { email: $('email').value, password: $('password').value, name: $('name').value });
+    if (!r.ok) throw new Error(r.error || 'حصل خطأ');
+    token = r.token; store.set(token); applyMe(r); showApp();
+  } catch (err) { $('authErr').textContent = err.message === 'Failed to fetch' ? 'مش قادر أوصل للسيرفر' : err.message; $('authErr').classList.remove('hidden'); }
+  $('authBtn').disabled = false;
+};
+
+function applyMe(r) {
+  me = r;
+  const u = r.user, pro = u.plan === 'pro' || u.role === 'admin';
+  $('planBadge').textContent = u.role === 'admin' ? 'Admin' : pro ? 'Pro ✦' : 'مجاني';
+  $('planBadge').classList.toggle('pro', pro);
+  $('avatar').textContent = (u.name || u.email).trim()[0].toUpperCase();
+  $('mName').textContent = u.name || 'حسابي'; $('mEmail').textContent = u.email;
+  $('upgradeMenu').classList.toggle('hidden', pro);
+  $('publicWrap').classList.toggle('hidden', u.role !== 'admin');
+  setUsage(r.usage.used, r.usage.limit);
+  $('hello').textContent = 'أهلاً' + (u.name ? ' ' + u.name.split(' ')[0] : '') + ' 👋';
+  $('helloSub').textContent = pro ? 'اسأل سؤالك القانوني أو في ملفات قضاياك' : 'اسأل أي سؤال قانوني بالعامية، وهرد عليك ببساطة';
+  const chips = pro
+    ? ['ما أركان جريمة خيانة الأمانة ودفوعها؟', 'مواعيد الطعن بالاستئناف في المدني', 'لخّص لي أهم نقاط العقد اللي رفعته', 'شروط قبول دعوى صحة التوقيع']
+    : ['المستأجر مش بيدفع الإيجار، أعمل إيه؟', 'إزاي أرفع قضية نفقة؟', 'اتفصلت من الشغل من غير سبب، ليا حقوق؟', 'حد مضاني على إيصال أمانة، أتصرف إزاي؟'];
+  $('chips').innerHTML = '';
+  chips.forEach(c => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = c; b.onclick = () => { $('q').value = c; send(); }; $('chips').appendChild(b); });
+}
+function setUsage(used, limit) {
+  $('usageTxt').textContent = used + ' / ' + limit + ' النهارده';
+  $('usageBar').style.width = Math.min(100, used / limit * 100) + '%';
+}
+function showApp() { $('authView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('q').focus(); }
+function showAuth() { $('appView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
+
+$('avatar').onclick = e => { e.stopPropagation(); $('menu').classList.toggle('hidden'); };
+document.addEventListener('click', () => $('menu').classList.add('hidden'));
+$('logoutBtn').onclick = async () => { try { await api('logout'); } catch (e) {} token = null; store.clear(); location.reload(); };
+const openPro = () => { $('scrim').classList.remove('hidden'); $('proModal').classList.remove('hidden'); };
+const closeAll = () => ['scrim', 'proModal', 'drawer'].forEach(i => $(i).classList.add('hidden'));
+$('upgradeMenu').onclick = openPro; $('closeModal').onclick = closeAll; $('scrim').onclick = closeAll; $('closeDrawer').onclick = closeAll;
+$('newBtn').onclick = () => { session = 's' + Date.now().toString(36); $('thread').querySelectorAll('.msg').forEach(m => m.remove()); $('welcome').classList.remove('hidden'); };
+
+/* ---------- chat ---------- */
+const q = $('q');
+q.addEventListener('input', () => { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 180) + 'px'; $('send').disabled = !q.value.trim() || busy; });
+q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+$('send').onclick = send;
+const scroll = () => { $('main').scrollTop = $('main').scrollHeight; };
+/* small safe markdown renderer: escape first, then format */
+function md(src) {
+  const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const out = []; let list = null, para = [];
+  const flushP = () => { if (para.length) { out.push('<p>' + para.join('<br>') + '</p>'); para = []; } };
+  const flushL = () => { if (list) { out.push('</' + list + '>'); list = null; } };
+  for (const raw of String(src).replace(/\r/g, '').split('\n')) {
+    const l = raw.trim(); let m;
+    if (!l) { flushP(); flushL(); continue; }
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(l)) { flushP(); flushL(); out.push('<hr>'); continue; }
+    if ((m = l.match(/^#{1,6}\s+(.*)$/))) { flushP(); flushL(); out.push('<h3>' + inline(m[1]) + '</h3>'); continue; }
+    if ((m = l.match(/^>\s?(.*)$/))) { flushP(); flushL(); out.push('<blockquote>' + inline(m[1]) + '</blockquote>'); continue; }
+    if ((m = l.match(/^(?:[-*•])\s+(.*)$/)) || (m = l.match(/^\d+[.)]\s+(.*)$/))) {
+      const type = /^\d/.test(l) ? 'ol' : 'ul'; flushP();
+      if (list !== type) { flushL(); out.push('<' + type + '>'); list = type; }
+      out.push('<li>' + inline(m[1]) + '</li>'); continue;
+    }
+    flushL(); para.push(inline(l));
+  }
+  flushP(); flushL(); return out.join('');
+}
+
+function addUser(t) { const d = document.createElement('div'); d.className = 'msg u'; d.innerHTML = '<div class="bubble"></div>'; d.firstChild.textContent = t; $('thread').appendChild(d); scroll(); }
+function addBot() {
+  const d = document.createElement('div'); d.className = 'msg b';
+  d.innerHTML = '<div class="bubble"><div class="who"><div class="logo-mark">⚖️</div>المستشار</div><div class="md"></div><div class="foot"></div></div>';
+  $('thread').appendChild(d); scroll(); return d;
+}
+const STAGES_FREE = ['بيدوّر في القوانين', 'بيجهز الرد'];
+const STAGES_PRO = ['بيحلل السؤال', 'بيدوّر في القوانين وملفاتك', 'بيكتب الرأي القانوني', 'بيراجع الاستشهادات'];
+
+async function send() {
+  const text = q.value.trim(); if (!text || busy) return;
+  busy = true; q.value = ''; q.style.height = 'auto'; $('send').disabled = true; $('welcome').classList.add('hidden');
+  addUser(text);
+  const bot = addBot(), body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
+  const pro = me && (me.user.plan === 'pro' || me.user.role === 'admin');
+  const stages = pro ? STAGES_PRO : STAGES_FREE; let si = 0;
+  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span id="stage">' + stages[0] + '</span></div>';
+  const timer = setInterval(() => { si = Math.min(si + 1, stages.length - 1); const s = bot.querySelector('#stage'); if (s) s.textContent = stages[si]; }, pro ? 5000 : 3500);
+  const t0 = performance.now();
+  try {
+    const r = await fetch(API.base + '/Chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: text, sessionId: session, token }) });
+    let data = await r.json(); if (Array.isArray(data)) data = data[0];
+    if (data.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
+    body.innerHTML = md(data.output || 'مفيش رد.');
+    if (data.error === 'quota') { body.classList.add('err'); }
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    const tags = [];
+    if (data.legal_area && data.legal_area !== 'other') tags.push('<span class="tag">' + data.legal_area + '</span>');
+    if (data.review === 'pass') tags.push('<span class="tag ok">✓ الاستشهادات اتراجعت</span>');
+    if (data.review === 'fixed') tags.push('<span class="tag ok">✓ اتراجع واتصحح</span>');
+    if (data.ok) tags.push('<span class="tag">' + secs + ' ث</span>');
+    foot.innerHTML = tags.join('');
+    if (typeof data.remaining === 'number' && me) setUsage(me.usage.limit - data.remaining, me.usage.limit);
+  } catch (e) {
+    body.innerHTML = '<span class="err">حصلت مشكلة في الاتصال. جرّب تاني.</span>';
+  } finally { clearInterval(timer); busy = false; $('send').disabled = !q.value.trim(); scroll(); }
+}
+
+/* ---------- documents ---------- */
+$('docsBtn').onclick = () => {
+  const pro = me && (me.user.plan === 'pro' || me.user.role === 'admin');
+  $('scrim').classList.remove('hidden'); $('drawer').classList.remove('hidden');
+  $('uploadBox').classList.toggle('hidden', !pro);
+  loadDocs();
+};
+function docList(el, rows, empty) {
+  el.innerHTML = rows.length ? '' : '<div style="color:var(--mute);font-size:13.5px">' + empty + '</div>';
+  rows.forEach(r => { const d = document.createElement('div'); d.className = 'doc'; d.innerHTML = '<span></span><span></span>'; d.children[0].textContent = r.file || '(بدون اسم)'; d.children[1].textContent = r.chunks + ' جزء'; el.appendChild(d); });
+}
+async function loadDocs() {
+  try {
+    const r = await api('docs');
+    const pro = me && (me.user.plan === 'pro' || me.user.role === 'admin');
+    docList($('mine'), r.mine || [], pro ? 'لسه مرفعتش ملفات' : '<a href="#" id="upLink">رفع الملفات متاح في Pro ✦</a>');
+    const l = $('upLink'); if (l) l.onclick = e => { e.preventDefault(); $('drawer').classList.add('hidden'); openPro(); };
+    docList($('library'), r.library || [], 'المكتبة لسه فاضية');
+  } catch (e) {}
+}
+const drop = $('drop');
+drop.onclick = () => $('file').click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+drop.ondragleave = () => drop.classList.remove('on');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
+$('file').onchange = () => { if ($('file').files[0]) upload($('file').files[0]); $('file').value = ''; };
+async function upload(f) {
+  const st = $('upStatus'); st.style.color = 'var(--mute)';
+  st.innerHTML = '<span class="typing"><span class="dots"><i></i><i></i><i></i></span>بيترفع ويتفهرس: ' + f.name.replace(/</g, '&lt;') + '</span>';
+  const fd = new FormData();
+  fd.append('data', f, f.name); fd.append('filename', f.name); fd.append('contentType', f.type || '');
+  fd.append('token', token); fd.append('target', $('toPublic').checked ? 'public' : 'mine');
+  try {
+    const r = await fetch(API.base + '/upload', { method: 'POST', body: fd });
+    let d = {}; try { d = await r.json(); if (Array.isArray(d)) d = d[0]; } catch (e) {}
+    if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
+    st.style.color = 'var(--brand)'; st.textContent = '✓ اترفع: ' + f.name;
+  } catch (e) { st.style.color = 'var(--danger)'; st.textContent = '✕ ' + e.message; }
+  loadDocs(); refreshMe();
+}
+async function refreshMe() { try { const r = await api('me'); if (r.ok) applyMe(r); } catch (e) {} }
+
+/* ---------- boot ---------- */
+(async () => {
+  if (!token) { setMode('login'); showAuth(); return; }
+  try { const r = await api('me'); if (r.ok) { applyMe(r); showApp(); return; } } catch (e) {}
+  store.clear(); token = null; setMode('login'); showAuth();
+})();
+</script>
+</body>
+</html>

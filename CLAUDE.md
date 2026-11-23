@@ -11,6 +11,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 | Repo (this) | https://github.com/JosephNader03code/legal-assistant-app |
 | n8n instance | https://joe03.app.n8n.cloud |
 | Main workflow "Agents to Apps - RAG Systems" | https://joe03.app.n8n.cloud/workflow/Urs8CLRcjtJbkZ8G |
+| Search tool workflow "Smart Lawyer - Search Tool" | https://joe03.app.n8n.cloud/workflow/ySmFhCajtWfNI3XG |
 | Website workflow "Smart Lawyer - Test Website" | https://joe03.app.n8n.cloud/workflow/sPTOi4r3hCBgsbvW |
 | Supabase project | https://supabase.com/dashboard/project/rnjnozbptnqeskkyjqae |
 
@@ -21,6 +22,8 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/routing_cache.sql`: model routing (`sl_route`, `sl_take`, `sl_lite`) and the semantic cache (`sl_cache_get` / `sl_cache_put`).
 - `docs/sql/case_files.sql`: case-file extraction storage and the agent tools (`sl_case_facts`, `sl_read_doc`, `sl_keyword_search`).
 - `docs/sql/feedback.sql`: 👍/👎 votes in `sl_feedback` (question, answer, rating, plan), one vote per answer (md5). Doubles as the future fine-tuning dataset: `select question, answer from sl_feedback where rating = 1 and kind = 'chat'`.
+- `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
+- `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
 - `docs/ws_fetch.py`: downloads law texts from Arabic Wikisource.
 - `docs/clean_law.py`: normalizes Arabic law text and splits it into upload parts at article boundaries.
@@ -92,6 +95,22 @@ Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶
 
 Response JSON: `{ok, output, plan, remaining, intent?, legal_area?, review?: pass|fixed|skipped|failed, answeredBy?, cached?, model?, complexity?}`.
 
+### Search (law_library / my_documents tools)
+
+Both agent tools are **Call Workflow tools** → "Smart Lawyer - Search Tool" (inputs `query`, `userId`, `scope` = library | mine):
+`Embeddings Up?` (`sl_embed_ok()`) → `Use Gemini?` → `Embed Query` (Gemini `gemini-embedding-001`, 3072 dims like the stored vectors, 7 s timeout, error output) → `Search` (`sl_search(query, vector, user, scope)`: top-5 vector + top-3 Arabic full-text, deduped).
+- Gemini error → `Trip Breaker` (`sl_embed_trip`: 2 min for a per-minute limit, 30 min otherwise) → `Search` with no vector (keyword only: 3 results, 1400 chars each).
+- While the breaker is open Gemini is not called at all. The free tier is **1000 embedding requests per day**.
+- `sl_search` boosts an exact "مادة N" match. Keyword quality is good for formal wording (triage rewrites the question), weaker for dialect.
+- Uploads still need Gemini embeddings (the Supabase Vector Store node); they fail while the quota is exhausted.
+
+### Request log
+
+Every chat / map request writes one row to `sl_request_log` (Postgres nodes `Log Denied`, `Log Clarify`, `Log Cached`, `Log Free`, `Log Pro`, `Log Map`, `Log Map Denied`, all after the response so they add no latency): nickname (full name or email prefix), plan, chat id, kind, today's message number and limit, `quota_hit`, chars, `tokens_est`, latency, model, review, `embed_ok`, n8n `exec_id`, error.
+- `tokens_est` = characters / 3 with the prompts and the agent loop (pro × 0.73, calibrated on one real execution: 67k estimated vs 49k real).
+- Real tokens: n8n stores `tokenUsage` per LLM call in the execution data, which the workflow cannot read. `python3 docs/backfill_tokens.py EXEC_ID…` prints `sl_log_set_tokens(...)` calls. To automate it, add an n8n API credential and a scheduled workflow.
+- Daily report: `select * from sl_daily_usage where day = current_date order by last_at desc;` (answers, chats, maps, when the quota was hit and after how many messages, blocked attempts, tokens, avg seconds, answers made with keyword search).
+
 ### Mind map / timeline flow (main workflow, group "Case mind map + timeline")
 
 The mind map and the timeline are **two separate features** (body `type: 'mindmap' | 'timeline'`), each with its own daily quota (`sl_feature_usage.feature` = `map` / `timeline`).
@@ -126,7 +145,8 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 
 | Agent | Primary | Fallback |
 |---|---|---|
-| Free Agent | Groq `openai/gpt-oss-120b` | OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free` |
+| Free Agent | Groq `openai/gpt-oss-120b` | Groq `openai/gpt-oss-20b` (OpenRouter free was exhausted daily) |
+| Clarifier (intake questions) | Groq `openai/gpt-oss-20b` (few-shot for dialect) | OpenRouter |
 | Triage | Groq `openai/gpt-oss-20b` | OpenRouter |
 | Expert (AI Agent) | Groq `openai/gpt-oss-120b` | OpenRouter |
 | QA Reviewer | OpenRouter | Groq `gpt-oss-20b` |
@@ -212,7 +232,9 @@ manshurat.org resets connections from the container.
 | Clarifying questions | about 2 s |
 | Mind map / timeline | about 3.5–7.5 s |
 
-**Known issue (Nov 23 2026):** Gemini embeddings (`gemini-embedding-001`) returned 429 during testing, so `law_library` / `my_documents` search failed and Pro fell back to OpenRouter / DeepSeek (60–180 s). Needs a paid Gemini key or another embedding provider.
+**Capacity (the real bottleneck):** Groq free = 8k tokens/min per model; one free answer ≈ 4–10k tokens, one Pro answer ≈ 50k. Under bursts the agents hit 429 on both Groq models and OpenRouter free (50 requests/day) is exhausted, so answers fail. Fix: Groq Dev Tier or $10 OpenRouter credit.
+
+**Known issue (Nov 23 2026, mitigated by the breaker):** Gemini embeddings (`gemini-embedding-001`) returned 429 during testing, so `law_library` / `my_documents` search failed and Pro fell back to OpenRouter / DeepSeek (60–180 s). Needs a paid Gemini key or another embedding provider.
 
 ## Open items / next steps
 

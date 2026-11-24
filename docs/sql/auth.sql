@@ -7,6 +7,7 @@ insert into sl_plans (plan, daily_messages, max_docs) values ('free', 6, 10), ('
 alter table sl_plans add column if not exists daily_maps int not null default 1;
 alter table sl_plans add column if not exists daily_timelines int not null default 1;
 alter table sl_plans add column if not exists daily_uploads int not null default 1;
+alter table sl_plans add column if not exists daily_drafts int not null default 0;   -- document drafting (drafts.sql)
 
 create table if not exists sl_users (
   id uuid primary key default gen_random_uuid(),
@@ -51,9 +52,9 @@ alter table sl_feature_usage enable row level security;
 create or replace function sl_limits(p_user uuid) returns jsonb
 language sql stable security definer set search_path = public as $$
   select case when u.role = 'admin'
-    then jsonb_build_object('daily_messages', 100000, 'daily_maps', 100000, 'daily_timelines', 100000, 'daily_uploads', 100000, 'max_docs', 100000)
+    then jsonb_build_object('daily_messages', 100000, 'daily_maps', 100000, 'daily_timelines', 100000, 'daily_uploads', 100000, 'max_docs', 100000, 'daily_drafts', 100000)
     else jsonb_build_object('daily_messages', p.daily_messages, 'daily_maps', p.daily_maps, 'daily_timelines', p.daily_timelines,
-                            'daily_uploads', p.daily_uploads, 'max_docs', p.max_docs) || coalesce(u.limits, '{}'::jsonb) end
+                            'daily_uploads', p.daily_uploads, 'max_docs', p.max_docs, 'daily_drafts', p.daily_drafts) || coalesce(u.limits, '{}'::jsonb) end
   from sl_users u join sl_plans p on p.plan = u.plan where u.id = p_user
 $$;
 

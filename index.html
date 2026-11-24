@@ -249,6 +249,20 @@ html,body{overflow-x:hidden}
 .issue .ia{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
 .issue .ia .btn{padding:7px 12px;font-size:13px}
 .issue .ires{font-size:13px;margin-top:8px}
+.dtypes{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.dfacts{width:100%;min-height:150px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);outline:none;resize:vertical;line-height:1.7}
+.dfacts:focus{border-color:var(--brand)}
+.paper{background:#fffdf8;color:#1b1b1b;border:1px solid var(--line);border-radius:10px;padding:22px 24px;font-family:"Times New Roman","Traditional Arabic","IBM Plex Sans Arabic",serif;font-size:15.5px;line-height:2;text-align:justify;max-height:70vh;overflow:auto}
+.paper h4{text-align:center;font-size:17px;margin:0 0 14px;text-decoration:underline;text-underline-offset:6px}
+.paper h5{font-size:15.5px;margin:14px 0 4px;text-decoration:underline;text-underline-offset:5px}
+.paper p{margin:0 0 8px}
+.paper mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 2px}
+.dbasis{margin:0;padding:10px 14px;border-top:1px solid var(--line);font-size:13px}
+.dbasis ul{margin:4px 0 0;padding-right:18px}
+.dbasis .ok{color:var(--brand)}
+.dbasis .warn{color:var(--gold)}
+details.known{padding:8px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--ink2)}
+details.known summary{cursor:pointer}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 18px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100vw - 32px)}
 .toast.click{cursor:pointer}
 
@@ -382,6 +396,7 @@ html,body{overflow-x:hidden}
       <textarea id="q" rows="1" placeholder="اكتب سؤالك هنا..."></textarea>
       <button class="icon-btn" id="mapBtn" title="خريطة ذهنية للقضية">🧠</button>
       <button class="icon-btn" id="tlBtn" title="خط زمني للقضية">🕒</button>
+      <button class="icon-btn" id="draftBtn" title="صياغة مستند (صحيفة دعوى، إنذار، مذكرة، عقد)">📝</button>
       <button class="send" id="send" title="إرسال" disabled>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
       </button>
@@ -473,6 +488,17 @@ html,body{overflow-x:hidden}
   </div>
 </aside>
 
+<!-- drafting modal -->
+<div class="modal hidden" id="draftModal" style="width:min(560px,calc(100% - 32px));max-height:90vh;overflow-y:auto">
+  <h3>📝 صياغة مستند</h3>
+  <p class="sub" style="margin:0 0 10px">اختار نوع المستند واكتب الوقائع وبيانات الأطراف. أي بيانات ناقصة هتظهر كخانات فاضية تكملها.</p>
+  <div class="dtypes" id="dTypes"></div>
+  <textarea class="dfacts" id="dFacts" placeholder="مثال: المؤجر أحمد محمود، مقيم ... المستأجر محمد سعيد، مستأجر شقة في ... بعقد بتاريخ ... بأجرة ... ومتأخر عن سداد ..."></textarea>
+  <label class="check"><input type="checkbox" id="dUseChat"> استخدم وقائع المحادثة دي وملخصات ملفاتي المرفوعة</label>
+  <div class="hintline" id="dHint"></div>
+  <div class="clar-act" style="margin-top:12px"><button class="btn" id="dGo">✍️ صياغة</button><button class="linkbtn" id="dCancel">إلغاء</button></div>
+</div>
+
 <!-- pro modal -->
 <div class="modal hidden" id="proModal">
   <h3>✦ Pro للمحامين</h3>
@@ -480,6 +506,7 @@ html,body{overflow-x:hidden}
   <ul>
     <li>3 agents: فرز السؤال، خبير قانوني، ومراجع للاستشهادات</li>
     <li>ارفع ملفات قضاياك وعقودك واسأل فيها</li>
+    <li>صياغة صحف دعاوى وإنذارات ومذكرات وعقود (Word)</li>
     <li>300 سؤال في اليوم</li>
   </ul>
   <p style="font-size:14px;color:var(--ink2)">الاشتراك أونلاين قريب. للتفعيل دلوقتي تواصل مع الإدارة.</p>
@@ -570,7 +597,7 @@ $('avatar').onclick = e => { e.stopPropagation(); $('menu').classList.toggle('hi
 document.addEventListener('click', () => $('menu').classList.add('hidden'));
 $('logoutBtn').onclick = async () => { try { await api('logout'); } catch (e) {} token = null; store.clear(); location.reload(); };
 const openPro = () => { $('scrim').classList.remove('hidden'); $('proModal').classList.remove('hidden'); };
-const closeAll = () => { ['scrim', 'proModal', 'drawer', 'hdrawer', 'udrawer'].forEach(i => $(i).classList.add('hidden')); $('scrim').style.zIndex = ''; };
+const closeAll = () => { ['scrim', 'proModal', 'drawer', 'hdrawer', 'udrawer', 'draftModal'].forEach(i => $(i).classList.add('hidden')); $('scrim').style.zIndex = ''; };
 $('upgradeMenu').onclick = openPro; $('closeModal').onclick = closeAll; $('scrim').onclick = closeAll; $('closeDrawer').onclick = closeAll;
 const clearThread = () => $('thread').querySelectorAll('.msg').forEach(m => m.remove());
 const newChat = () => { if (busy) return; session = 's' + Date.now().toString(36); clearThread(); $('welcome').classList.remove('hidden'); closeAll(); q.focus(); };
@@ -619,6 +646,7 @@ const TIMELINE_RE = /(خط\s*(ال)?(زمني|زمنى|أحداث|احداث)|ت
 /* opts: {text, display, noClarify} for answers to the clarifying questions */
 async function send(opts = {}) {
   const typed = !opts.text, text = (opts.text || q.value).trim(); if (!text || busy) return;
+  if (typed && DRAFT_RE.test(text)) { q.value = ''; return openDraft(text); }
   if (typed && MINDMAP_RE.test(text)) return sendMap(text, 'mindmap');
   if (typed && TIMELINE_RE.test(text)) return sendMap(text, 'timeline');
   busy = true; if (typed) { q.value = ''; q.style.height = 'auto'; } $('send').disabled = true; $('welcome').classList.add('hidden');
@@ -708,7 +736,7 @@ async function refreshMe() { try { const r = await api('me'); if (r.ok) applyMe(
 
 
 /* ---------- admin dashboard ---------- */
-const LIMITS = [['daily_messages', 'رسايل في اليوم'], ['daily_maps', 'خرايط ذهنية في اليوم'], ['daily_timelines', 'خطوط زمنية في اليوم'], ['daily_uploads', 'رفع مستندات في اليوم'], ['max_docs', 'أقصى عدد ملفات']];
+const LIMITS = [['daily_messages', 'رسايل في اليوم'], ['daily_maps', 'خرايط ذهنية في اليوم'], ['daily_timelines', 'خطوط زمنية في اليوم'], ['daily_uploads', 'رفع مستندات في اليوم'], ['max_docs', 'أقصى عدد ملفات'], ['daily_drafts', 'صياغة مستندات في اليوم']];
 const adm = { users: [], plans: [], filter: 'all', tab: 'ov', editing: null };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n || 0).toLocaleString('en-US');
@@ -746,7 +774,7 @@ function renderOverview(o) {
     tile('نشطين النهارده', fmt(a.active_today), 'بعتوا رسالة واحدة على الأقل') +
     tile('رسايل النهارده', fmt(a.messages_today), fmt(a.clarify_today) + ' أسئلة قبل الرد · ' + fmt(a.cached_today) + ' من الكاش') +
     tile('رفعوا مستندات النهارده', fmt(a.uploaders_today), fmt(a.uploads_today) + ' ملف') +
-    tile('خرايط · خطوط زمنية', '🧠 ' + fmt(a.maps_today) + '&nbsp; 🕒 ' + fmt(a.timelines_today), 'النهارده') +
+    tile('خرايط · زمني · صياغة', '🧠 ' + fmt(a.maps_today) + '&nbsp; 🕒 ' + fmt(a.timelines_today) + '&nbsp; 📝 ' + fmt(a.drafts_today), 'النهارده') +
     tile('وصلوا للحد النهارده', fmt(a.quota_users_today), 'مستخدم اترفضت رسالته', a.quota_users_today > 0) +
     tile('ردود فشلت النهارده', fmt(a.failed_today), 'غالبًا من حدود الموديلات المجانية', a.failed_today > 0) +
     tile('متوسط وقت الرد', a.avg_seconds_today != null ? a.avg_seconds_today + ' ث' : '—', 'للردود الناجحة النهارده') +
@@ -926,7 +954,7 @@ async function loadUserMessages(u, c) {
   } catch (e) { box.innerHTML = '<div class="err">مقدرتش أحمّل الرسايل.</div>'; }
 }
 $('uClose').onclick = () => { $('udrawer').classList.add('hidden'); $('scrim').classList.add('hidden'); $('scrim').style.zIndex = ''; };
-const KIND_AR = { free: 'رد', pro: 'رد Pro', cached: 'رد من الكاش', clarify: 'أسئلة قبل الرد', mindmap: 'خريطة ذهنية', timeline: 'خط زمني', denied_quota: '⛔ وصل للحد', denied_unauth: 'غير مسجل', upload: '📄 رفع مستند', upload_denied: '⛔ رفع مرفوض', mindmap_denied: '⛔ خريطة مرفوضة', timeline_denied: '⛔ خط زمني مرفوض' };
+const KIND_AR = { free: 'رد', pro: 'رد Pro', cached: 'رد من الكاش', clarify: 'أسئلة قبل الرد', mindmap: 'خريطة ذهنية', timeline: 'خط زمني', denied_quota: '⛔ وصل للحد', denied_unauth: 'غير مسجل', upload: '📄 رفع مستند', upload_denied: '⛔ رفع مرفوض', mindmap_denied: '⛔ خريطة مرفوضة', timeline_denied: '⛔ خط زمني مرفوض', draft: '📝 صياغة مستند', draft_denied: '⛔ صياغة مرفوضة' };
 async function loadUserLog(id) {
   $('uActivity').innerHTML = '<div class="muted">بيحمّل...</div>';
   try {
@@ -1117,6 +1145,7 @@ const KIND = { fact: ['واقعة', '#2563eb'], procedure: ['إجراء', '#9333
 function renderMap(bot, map) {
   const body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
   body.innerHTML = '';
+  if (map.type === 'draft') return renderDraft(bot, map);
   if (map.type === 'timeline' || (!map.type && !map.mindmap)) return renderTimelineCard(bot, map);
   const card = document.createElement('div'); card.className = 'mapcard';
   const both = !map.type && (map.timeline || []).length;
@@ -1281,11 +1310,151 @@ function svgToPng(svg, name) {
 }
 
 
+
+/* ---------- document drafting (📝) ---------- */
+const DRAFT_TYPES = [['lawsuit', 'صحيفة دعوى'], ['notice', 'إنذار على يد محضر'], ['memo', 'مذكرة دفاع'], ['lease', 'عقد إيجار'], ['sale', 'عقد بيع'], ['complaint', 'بلاغ للنيابة'], ['poa_request', 'طلب / التماس']];
+const DRAFT_RE = /(صياغ[ةه]|صيغ[ةه]\s+(?:صحيف|إنذار|انذار|مذكر|عقد)|اكتب(?:لي|ل[يى])?\s+(?:صحيف|إنذار|انذار|مذكر|عقد|بلاغ)|حضّ?رلي\s+(?:صحيف|إنذار|انذار|مذكر|عقد))/;
+let draftType = 'lawsuit';
+$('dTypes').innerHTML = DRAFT_TYPES.map(([k, t]) => '<button class="opt" type="button" data-k="' + k + '">' + t + '</button>').join('');
+$('dTypes').querySelectorAll('.opt').forEach(b => b.onclick = () => { draftType = b.dataset.k; $('dTypes').querySelectorAll('.opt').forEach(x => x.classList.toggle('on', x === b)); });
+$('draftBtn').onclick = () => openDraft(q.value.trim());
+$('dCancel').onclick = closeAll;
+function guessType(t) { return /إنذار|انذار/.test(t) ? 'notice' : /مذكر/.test(t) ? 'memo' : /عقد\s*بيع|بيع/.test(t) ? 'sale' : /عقد|إيجار|ايجار/.test(t) && /عقد/.test(t) ? 'lease' : /بلاغ|شكو|نياب/.test(t) ? 'complaint' : /طلب|التماس/.test(t) ? 'poa_request' : 'lawsuit'; }
+function openDraft(text, type) {
+  const lim = me && me.usage && me.usage.limits ? me.usage.limits.daily_drafts : 0;
+  if (!lim) { openPro(); return; }
+  draftType = type || (text ? guessType(text) : draftType);
+  $('dTypes').querySelectorAll('.opt').forEach(x => x.classList.toggle('on', x.dataset.k === draftType));
+  if (text) $('dFacts').value = text;
+  const hasChat = !!$('thread').querySelector('.msg');
+  $('dUseChat').checked = hasChat; $('dUseChat').disabled = !hasChat;
+  $('dHint').textContent = me.user.role === 'admin' ? '' : 'حد الصياغة: ' + lim + ' مستندات في اليوم.';
+  $('scrim').classList.remove('hidden'); $('draftModal').classList.remove('hidden'); $('dFacts').focus();
+}
+$('dGo').onclick = () => {
+  const facts = $('dFacts').value.trim(), useChat = $('dUseChat').checked;
+  if (facts.length < 15 && !useChat) { $('dHint').textContent = 'اكتب الوقائع وبيانات الأطراف الأول (أو اختار استخدام المحادثة).'; return; }
+  closeAll(); $('dFacts').value = '';
+  sendDraft(draftType, facts, useChat);
+};
+async function sendDraft(type, facts, useChat) {
+  if (busy) return;
+  busy = true; $('send').disabled = true; $('welcome').classList.add('hidden');
+  const tname = (DRAFT_TYPES.find(x => x[0] === type) || [, 'مستند'])[1];
+  addUser('📝 صياغة ' + tname + (facts ? '\n' + facts.slice(0, 400) + (facts.length > 400 ? '…' : '') : '\n(من وقائع المحادثة)'));
+  const bot = addBot(), body = bot.querySelector('.md');
+  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span>بيدوّر على السند القانوني ويصيغ ' + tname + '…</span></div>';
+  try {
+    const r = await fetch(API.base + '/draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sessionId: session, docType: type, facts, useChat }) });
+    let d = await r.json(); if (Array.isArray(d)) d = d[0];
+    if (d.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
+    historyDirty = true;
+    if (!d.ok || !d.map) {
+      if (d.error === 'failed') { renderFailure(bot, 'draft'); return; }
+      if (d.error === 'upgrade') { body.innerHTML = md(d.output); const b = document.createElement('button'); b.className = 'btn ghost'; b.style.marginTop = '8px'; b.textContent = '✦ اعرف عن Pro'; b.onclick = openPro; body.appendChild(b); return; }
+      body.innerHTML = md(d.output || 'مقدرتش أصيغ المستند.'); body.classList.add('err'); return;
+    }
+    renderDraft(bot, d.map);
+    if (d.map_id) addRate(bot, { kind: 'map', question: facts, answer: 'map:' + d.map_id });
+  } catch (e) { body.innerHTML = '<span class="err">حصلت مشكلة في الاتصال. جرّب تاني.</span>'; }
+  finally { busy = false; $('send').disabled = !q.value.trim(); scroll(); }
+}
+const markPh = t => esc(t).replace(/\[[^\]\n]{1,80}\]/g, m => '<mark>' + m + '</mark>');
+function draftText(d) {
+  return [d.title, ''].concat(...(d.sections || []).map(s => (s.heading ? [s.heading] : []).concat(s.paragraphs, ['']))).join('\n').trim();
+}
+function renderDraft(bot, d) {
+  const body = bot.querySelector('.md'), foot = bot.querySelector('.foot');
+  body.innerHTML = '';
+  const card = document.createElement('div'); card.className = 'mapcard';
+  card.innerHTML = '<div class="mhead"><b></b><span class="badge"></span></div><div class="mview"><div class="paper"></div></div>';
+  card.querySelector('.mhead b').textContent = '📝 ' + (d.title || d.type_name || 'مستند');
+  card.querySelector('.mhead .badge').textContent = d.type_name || '';
+  card.querySelector('.paper').innerHTML = '<h4>' + esc(d.title || '') + '</h4>' + (d.sections || []).map(s =>
+    (s.heading ? '<h5>' + esc(s.heading) + '</h5>' : '') + s.paragraphs.map(p => '<p>' + markPh(p) + '</p>').join('')).join('');
+  const lb = d.legal_basis || [], unv = d.unverified_articles || [];
+  if (lb.length || unv.length) {
+    const box = document.createElement('div'); box.className = 'dbasis';
+    box.innerHTML = '<b>السند القانوني:</b><ul></ul>';
+    lb.forEach(b => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span></span> <span class="' + (b.verified ? 'ok' : 'warn') + '">' + (b.verified ? '✓ موجودة في نص القانون عندنا' : '⚠️ راجعها قبل الاستخدام') + '</span><br><span class="muted"></span>';
+      li.children[0].textContent = (b.article ? 'المادة ' + b.article.replace(/^ال?ماد[ةه]\s*/, '') + ' — ' : '') + b.law; li.querySelector('.muted').textContent = b.note || '';
+      box.querySelector('ul').appendChild(li);
+    });
+    if (unv.length) { const li = document.createElement('li'); li.className = 'warn'; li.textContent = '⚠️ مواد مذكورة في النص ومش لاقيينها في المصادر: ' + unv.join('، ') + '. اتأكد منها.'; box.querySelector('ul').appendChild(li); }
+    card.appendChild(box);
+  }
+  if (d.missing && d.missing.length) {
+    const m = document.createElement('div'); m.className = 'missing';
+    m.innerHTML = '<b>✍️ كمّل البيانات دي (متعلّمة بالأصفر في المستند):</b><ul></ul>';
+    d.missing.forEach(x => { const li = document.createElement('li'); li.textContent = x; m.querySelector('ul').appendChild(li); });
+    card.appendChild(m);
+  }
+  if (d.known_facts && d.known_facts.length) {
+    const k = document.createElement('details'); k.className = 'known';
+    k.innerHTML = '<summary>البيانات اللي اتاخدت من كلامك (' + d.known_facts.length + ')</summary><ul></ul>';
+    d.known_facts.forEach(x => { const li = document.createElement('li'); li.textContent = x; k.querySelector('ul').appendChild(li); });
+    card.appendChild(k);
+  }
+  const act = document.createElement('div'); act.className = 'mactions';
+  act.innerHTML = '<button class="btn ghost" data-a="docx">⬇ Word</button><button class="btn ghost" data-a="copy">⧉ نسخ</button><button class="btn ghost" data-a="print">🖨 طباعة</button><button class="btn ghost" data-a="edit">✏️ تعديل وإعادة صياغة</button>';
+  const fname = (d.title || 'مستند').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  act.querySelector('[data-a="docx"]').onclick = () => download(draftToDocx(d), fname + '.docx');
+  act.querySelector('[data-a="copy"]').onclick = async e => { try { await navigator.clipboard.writeText(draftText(d)); e.target.textContent = '✓ اتنسخ'; } catch (err) {} };
+  act.querySelector('[data-a="print"]').onclick = () => {
+    const w = window.open('', '_blank'); if (!w) return;
+    w.document.write('<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title></title><style>body{font-family:"Times New Roman",serif;padding:32px;line-height:2;font-size:16px;text-align:justify}h4{text-align:center;text-decoration:underline}h5{text-decoration:underline;margin:14px 0 4px}p{margin:0 0 8px}</style></head><body></body></html>');
+    w.document.title = d.title || ''; w.document.body.innerHTML = card.querySelector('.paper').innerHTML.replace(/<\/?mark>/g, '');
+    w.document.close(); w.focus(); w.print();
+  };
+  act.querySelector('[data-a="edit"]').onclick = () => openDraft((d.request || '') + '\n\nتعديلات مطلوبة على الصياغة السابقة: ', d.doc_type);
+  card.appendChild(act);
+  body.appendChild(card);
+  foot.innerHTML = '<span class="tag">' + esc(d.type_name || 'مستند') + '</span><span class="tag">مسودة: لازم تتراجع من محامي قبل الاستخدام</span>';
+}
+
+/* minimal .docx writer (store-only ZIP, RTL Arabic), no library */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  files.forEach(([name, text]) => {
+    const nm = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+    const head = [0x50, 0x4b, 0x03, 0x04, ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(nm.length), ...u16(0)];
+    parts.push(new Uint8Array(head), nm, data);
+    central.push(new Uint8Array([0x50, 0x4b, 0x01, 0x02, ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(nm.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nm);
+    off += head.length + nm.length + data.length;
+  });
+  const csize = central.reduce((a, b) => a + b.length, 0);
+  const end = new Uint8Array([0x50, 0x4b, 0x05, 0x06, ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(csize), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...central, end], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+function draftToDocx(d) {
+  const x = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  const run = (t, o = {}) => '<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>' + (o.b ? '<w:b/><w:bCs/>' : '') + (o.u ? '<w:u w:val="single"/>' : '') +
+    (o.hl ? '<w:highlight w:val="yellow"/>' : '') + (o.color ? '<w:color w:val="' + o.color + '"/>' : '') + '<w:sz w:val="' + (o.sz || 28) + '"/><w:szCs w:val="' + (o.sz || 28) + '"/><w:rtl/></w:rPr><w:t xml:space="preserve">' + x(t) + '</w:t></w:r>';
+  const para = (t, o = {}) => '<w:p><w:pPr><w:bidi/><w:jc w:val="' + (o.center ? 'center' : 'both') + '"/><w:spacing w:after="120" w:line="360" w:lineRule="auto"/></w:pPr>' +
+    String(t).split(/(\[[^\]\n]{1,80}\])/).filter(Boolean).map(seg => run(seg, { ...o, hl: /^\[.*\]$/.test(seg) })).join('') + '</w:p>';
+  let bodyXml = para(d.title || d.type_name || '', { b: true, u: true, center: true, sz: 32 });
+  (d.sections || []).forEach(s => { if (s.heading) bodyXml += para(s.heading, { b: true, u: true }); s.paragraphs.forEach(p => { bodyXml += para(p); }); });
+  if ((d.legal_basis || []).length) { bodyXml += para('السند القانوني (للمراجعة):', { b: true, sz: 22, color: '555555' }); d.legal_basis.forEach(b => { bodyXml += para('- ' + (b.article ? 'المادة ' + b.article.replace(/^ال?ماد[ةه]\s*/, '') + ' — ' : '') + b.law + (b.verified ? '' : ' (تُراجع)'), { sz: 22, color: '555555' }); }); }
+  bodyXml += para('مسودة أعدها المساعد القانوني — تُراجع من محامٍ قبل الاستخدام.', { sz: 18, color: '888888', center: true });
+  const docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + bodyXml +
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/><w:bidi/></w:sectPr></w:body></w:document>';
+  return zipStore([
+    ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'],
+    ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
+    ['word/document.xml', docXml]]);
+}
+
 /* ---------- failed answers: the user is told the admin was alerted ---------- */
 function renderFailure(bot, kind) {
   const body = bot.querySelector('.md');
-  body.innerHTML = '<div class="failbox"><p><b>حصلت مشكلة ومقدرتش أجهز ' + (kind === 'map' ? 'الخريطة' : 'الرد') + ' دلوقتي.</b></p>' +
-    '<p>اتبلغ فريق الدعم تلقائيًا، وأول ما المشكلة تتحل هيوصلك ' + (kind === 'map' ? 'الخريطة' : 'الرد') + ' في نفس المحادثة دي ومعاه إشعار 🔔.</p>' +
+  const what = kind === 'map' ? 'الخريطة' : kind === 'draft' ? 'المستند' : 'الرد';
+  body.innerHTML = '<div class="failbox"><p><b>حصلت مشكلة ومقدرتش أجهز ' + what + ' دلوقتي.</b></p>' +
+    '<p>اتبلغ فريق الدعم تلقائيًا، وأول ما المشكلة تتحل هيوصلك ' + what + ' في نفس المحادثة دي ومعاه إشعار 🔔.</p>' +
     '<button class="btn ghost" data-a="notify">🔔 بلغني على الموبايل</button></div>';
   const b = body.querySelector('[data-a="notify"]');
   if (!('Notification' in window) || Notification.permission === 'granted') b.remove();
@@ -1354,7 +1523,7 @@ async function pollIssues() {
   } catch (e) {}
 }
 const IS_FILTERS = [['open', 'مفتوحة'], ['resolved', 'اتحلت'], ['dismissed', 'متجاهلة'], ['all', 'الكل']];
-const KIND_LABEL = { free: 'رد مجاني', pro: 'رد Pro', mindmap: 'خريطة ذهنية', timeline: 'خط زمني' };
+const KIND_LABEL = { free: 'رد مجاني', pro: 'رد Pro', mindmap: 'خريطة ذهنية', timeline: 'خط زمني', draft: 'صياغة مستند' };
 const ST_LABEL = { open: '<span class="badge off">مفتوحة</span>', retrying: '<span class="badge pro">بيتعاد إرسالها…</span>', resolved: '<span class="badge admin">اتحلت ✓</span>', dismissed: '<span class="badge">متجاهلة</span>' };
 async function loadIssues() {
   $('isFilters').innerHTML = IS_FILTERS.map(([k, t]) => '<button class="fchip' + (iss.status === k ? ' on' : '') + '" data-s="' + k + '">' + t + '</button>').join('');
@@ -1400,12 +1569,14 @@ async function retryIssue(i, el, res) {
   res.innerHTML = '<span class="typing"><span class="dots"><i></i><i></i><i></i></span>بيعيد إرسال ' + (KIND_LABEL[i.kind] || 'الطلب') + ' باسم المستخدم...</span>';
   try {
     const t = await api('admin_issue_retry', { id: i.id }); if (!t.ok) throw new Error(t.error);
-    const isMap = i.kind === 'mindmap' || i.kind === 'timeline';
-    const body = isMap ? { token: t.token, sessionId: t.session, text: t.question === '(من المحادثة)' ? '' : t.question, type: i.kind, retryOf: i.id }
+    const isMap = i.kind === 'mindmap' || i.kind === 'timeline', isDraft = i.kind === 'draft';
+    const meta = t.meta || i.meta || {};
+    const body = isDraft ? { token: t.token, sessionId: t.session, docType: meta.doc_type, facts: t.question, useChat: !!meta.use_chat, retryOf: i.id }
+               : isMap ? { token: t.token, sessionId: t.session, text: t.question === '(من المحادثة)' ? '' : t.question, type: i.kind, retryOf: i.id }
                        : { token: t.token, sessionId: t.session, chatInput: t.question, noClarify: true, retryOf: i.id };
-    const r = await fetch(API.base + (isMap ? '/mindmap' : '/Chat'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const r = await fetch(API.base + (isDraft ? '/draft' : isMap ? '/mindmap' : '/Chat'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     let d = await r.json(); if (Array.isArray(d)) d = d[0];
-    const ok = isMap ? d.ok : d.ok && !/^معلش/.test(String(d.output || ''));
+    const ok = (isMap || isDraft) ? d.ok : d.ok && !/^معلش/.test(String(d.output || ''));
     res.innerHTML = ok ? '<b style="color:var(--brand)">✓ الرد وصل للمستخدم في نفس الشات واتبعتله إشعار.</b>' : '<b class="err">✕ لسه فيه مشكلة. انسخ التفاصيل وابعتها لـ Claude.</b>';
     setTimeout(() => { loadIssues(); pollIssues(); }, ok ? 1500 : 800);
   } catch (e) { res.innerHTML = '<span class="err">✕ ' + esc(e.message) + '</span>'; el.querySelectorAll('.ia .btn').forEach(b => b.disabled = false); }

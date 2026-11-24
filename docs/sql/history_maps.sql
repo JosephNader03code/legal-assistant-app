@@ -87,6 +87,16 @@ begin
             from sl_maps mp where mp.session_id = key) q), '[]'::jsonb));
   elsif p_action = 'feedback' then
     return sl_feedback_set(j, p);                              -- feedback.sql
+  elsif p_action = 'drafts' then
+    -- the user's drafted documents (newest first), for the drafting page (drafts.sql)
+    return jsonb_build_object('ok', true, 'drafts', coalesce((select jsonb_agg(x order by (x->>'id')::bigint desc) from (
+      select jsonb_build_object('id', id, 'session', split_part(session_id, ':', 2), 'title', data->>'title', 'type', data->>'doc_type',
+                                'type_name', data->>'type_name', 'at', created_at) x
+        from sl_maps where user_id = uid::uuid and data->>'type' = 'draft' order by id desc limit 50) t), '[]'::jsonb));
+  elsif p_action = 'draft_get' then
+    return coalesce((select jsonb_build_object('ok', true, 'id', id, 'draft', data) from sl_maps
+                      where id = nullif(p->>'id', '')::bigint and user_id = uid::uuid and data->>'type' = 'draft'),
+                    jsonb_build_object('ok', false, 'error', 'not found'));
   elsif p_action = 'delete_session' then
     if sid = '' then return jsonb_build_object('ok', false, 'error', 'missing session'); end if;
     delete from n8n_chat_histories where session_id = key;
@@ -109,7 +119,10 @@ language sql security definer set search_path = public as $$
     'map', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
                       and day = (now() at time zone 'Africa/Cairo')::date and feature = 'map'), 0),
     'timeline', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
-                      and day = (now() at time zone 'Africa/Cairo')::date and feature = 'timeline'), 0))
+                      and day = (now() at time zone 'Africa/Cairo')::date and feature = 'timeline'), 0),
+    'draft', coalesce((select n from sl_feature_usage where user_id = (j->'user'->>'id')::uuid
+                      and day = (now() at time zone 'Africa/Cairo')::date and feature = 'draft'), 0),
+    'limit_draft', (sl_limits((j->'user'->>'id')::uuid)->>'daily_drafts')::int)
 $$;
 
 -- visual webhook: auth + daily quota of the requested feature + gather the case context

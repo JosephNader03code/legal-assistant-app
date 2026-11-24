@@ -249,7 +249,31 @@ html,body{overflow-x:hidden}
 .issue .ia{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
 .issue .ia .btn{padding:7px 12px;font-size:13px}
 .issue .ires{font-size:13px;margin-top:8px}
-.dtypes{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.dp-hero{background:linear-gradient(135deg,#0f3d22,#14532d 60%,#1d6b3c);color:#eaf5ee;border-radius:18px;padding:26px 28px;position:relative}
+.dp-hero h1{margin:0 0 8px;font-size:24px;line-height:1.4}
+.dp-hero p{margin:0;max-width:720px;opacity:.92;font-size:15px}
+.dp-quota{position:absolute;top:22px;left:24px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 12px;font-size:13px}
+.dp-feats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.dp-feats div{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.6}
+.dp-feats b{display:block;font-size:14px}
+@media (max-width:860px){.dp-feats{grid-template-columns:1fr 1fr}.dp-quota{position:static;display:inline-block;margin-top:12px}}
+.dp-step{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-top:16px}
+.dp-step-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dp-step-h h3{margin:0;font-size:16px}
+.dp-step-h .num{width:28px;height:28px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
+.dp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.dp-card{position:relative;text-align:right;border:1.5px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 14px 12px;color:var(--ink);transition:border .15s,background .15s,transform .15s}
+.dp-card:hover{border-color:var(--brand);transform:translateY(-1px)}
+.dp-card .ic{font-size:24px;line-height:1;margin-bottom:8px;display:block}
+.dp-card b{display:block;font-size:15px;margin-bottom:3px}
+.dp-card small{display:block;color:var(--mute);font-size:12.5px;line-height:1.6}
+.dp-card.on{border-color:var(--brand);background:var(--brand-soft)}
+.dp-card.on:after{content:"✓";position:absolute;top:10px;left:12px;width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-size:13px;font-weight:700}
+@media (max-width:640px){.dp-cards{grid-template-columns:1fr 1fr}.dp-card small{display:none}}
+.dp-need{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--ink2)}
+.dp-need span.n{background:var(--gold-soft);color:var(--ink2);border-radius:999px;padding:2px 10px;font-size:12.5px}
+.dp-list .r{cursor:pointer}
+.dp-list .r:hover b{color:var(--brand)}
 .dfacts{width:100%;min-height:150px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);outline:none;resize:vertical;line-height:1.7}
 .dfacts:focus{border-color:var(--brand)}
 .paper{background:#fffdf8;color:#1b1b1b;border:1px solid var(--line);border-radius:10px;padding:22px 24px;font-family:"Times New Roman","Traditional Arabic","IBM Plex Sans Arabic",serif;font-size:15.5px;line-height:2;text-align:justify;max-height:70vh;overflow:auto}
@@ -365,6 +389,7 @@ details.known summary{cursor:pointer}
     <div class="top-r">
       <div class="usage" title="رسايل النهارده"><span id="usageTxt"></span><div class="meter"><i id="usageBar"></i></div></div>
       <span class="badge" id="planBadge">مجاني</span>
+      <button class="btn ghost" id="draftNavBtn" title="صياغة المستندات القانونية">📝 <span class="hide-sm">الصياغة</span></button>
       <button class="btn ghost" id="histBtn" title="المحادثات القديمة">🕘 <span class="hide-sm">المحادثات</span></button>
       <button class="btn ghost" id="docsBtn">📄 <span class="hide-sm">المستندات</span></button>
       <button class="btn ghost bell" id="bellBtn" title="الإشعارات">🔔<span class="cnt hidden" id="bellCnt"></span></button>
@@ -488,16 +513,35 @@ details.known summary{cursor:pointer}
   </div>
 </aside>
 
-<!-- drafting modal -->
-<div class="modal hidden" id="draftModal" style="width:min(560px,calc(100% - 32px));max-height:90vh;overflow-y:auto">
-  <h3>📝 صياغة مستند</h3>
-  <p class="sub" style="margin:0 0 10px">اختار نوع المستند واكتب الوقائع وبيانات الأطراف. أي بيانات ناقصة هتظهر كخانات فاضية تكملها.</p>
-  <div class="dtypes" id="dTypes"></div>
-  <textarea class="dfacts" id="dFacts" placeholder="مثال: المؤجر أحمد محمود، مقيم ... المستأجر محمد سعيد، مستأجر شقة في ... بعقد بتاريخ ... بأجرة ... ومتأخر عن سداد ..."></textarea>
-  <label class="check"><input type="checkbox" id="dUseChat"> استخدم وقائع المحادثة دي وملخصات ملفاتي المرفوعة</label>
-  <div class="hintline" id="dHint"></div>
-  <div class="clar-act" style="margin-top:12px"><button class="btn" id="dGo">✍️ صياغة</button><button class="linkbtn" id="dCancel">إلغاء</button></div>
-</div>
+<!-- drafting page -->
+<section class="admpage hidden" id="draftView">
+  <header class="top">
+    <div class="logo"><div class="logo-mark">📝</div><h2 style="margin:0;font-size:17px">صياغة المستندات</h2></div>
+    <div class="top-r"><button class="btn ghost" id="dpClose">← الرجوع للشات</button></div>
+  </header>
+  <div class="adm-body"><div class="adm-wrap" style="max-width:1000px">
+    <div class="dp-hero">
+      <span class="dp-quota" id="dpQuota"></span>
+      <h1>صياغة المستندات القانونية</h1>
+      <p>اكتب الوقائع بكلامك العادي، والمساعد يصيغلك المستند بالشكل الرسمي المعتمد في المحاكم المصرية، مستند لنصوص القوانين، وجاهز تكمّله وتنزّله Word.</p>
+      <div class="dp-feats">
+        <div><b>⚖️ صيغة رسمية</b>ديباجة وموضوع وأسانيد وطلبات زي اللي بيتقدم فعلًا</div>
+        <div><b>📚 سند متراجع</b>كل رقم مادة بيتراجع على نص القانون: ✓ أو ⚠️</div>
+        <div><b>🟨 مفيش تأليف</b>البيانات الناقصة بتبقى خانات صفرا تكمّلها</div>
+        <div><b>⬇ Word جاهز</b>نزّله، اطبعه، أو عدّل واطلب صياغة تانية</div>
+      </div>
+    </div>
+    <section class="dp-step"><div class="dp-step-h"><span class="num">1</span><h3>اختار نوع المستند</h3></div><div class="dp-cards" id="dpTypes"></div></section>
+    <section class="dp-step"><div class="dp-step-h"><span class="num">2</span><h3>اكتب الوقائع وبيانات الأطراف</h3></div>
+      <div class="dp-need" id="dpNeed"></div>
+      <textarea class="dfacts" id="dpFacts"></textarea>
+      <label class="check" id="dpChatWrap"><input type="checkbox" id="dpUseChat"> استخدم وقائع المحادثة المفتوحة وملخصات ملفاتي المرفوعة</label>
+      <div class="clar-act" style="margin-top:12px"><button class="btn" id="dpGo">✍️ صياغة المستند</button><span class="hintline" id="dpHint" style="margin:0"></span></div>
+    </section>
+    <section class="dp-step hidden" id="dpResultStep"><div class="dp-step-h"><span class="num">3</span><h3>راجع المستند، كمّل الخانات الصفرا، ونزّله</h3></div><div id="dpResult"></div></section>
+    <section class="dp-step"><div class="dp-step-h"><span class="num">📁</span><h3>مستنداتي السابقة</h3></div><div class="rowlist dp-list" id="dpList"></div></section>
+  </div></div>
+</section>
 
 <!-- pro modal -->
 <div class="modal hidden" id="proModal">
@@ -597,7 +641,7 @@ $('avatar').onclick = e => { e.stopPropagation(); $('menu').classList.toggle('hi
 document.addEventListener('click', () => $('menu').classList.add('hidden'));
 $('logoutBtn').onclick = async () => { try { await api('logout'); } catch (e) {} token = null; store.clear(); location.reload(); };
 const openPro = () => { $('scrim').classList.remove('hidden'); $('proModal').classList.remove('hidden'); };
-const closeAll = () => { ['scrim', 'proModal', 'drawer', 'hdrawer', 'udrawer', 'draftModal'].forEach(i => $(i).classList.add('hidden')); $('scrim').style.zIndex = ''; };
+const closeAll = () => { ['scrim', 'proModal', 'drawer', 'hdrawer', 'udrawer'].forEach(i => $(i).classList.add('hidden')); $('scrim').style.zIndex = ''; };
 $('upgradeMenu').onclick = openPro; $('closeModal').onclick = closeAll; $('scrim').onclick = closeAll; $('closeDrawer').onclick = closeAll;
 const clearThread = () => $('thread').querySelectorAll('.msg').forEach(m => m.remove());
 const newChat = () => { if (busy) return; session = 's' + Date.now().toString(36); clearThread(); $('welcome').classList.remove('hidden'); closeAll(); q.focus(); };
@@ -1312,53 +1356,103 @@ function svgToPng(svg, name) {
 
 
 /* ---------- document drafting (📝) ---------- */
-const DRAFT_TYPES = [['lawsuit', 'صحيفة دعوى'], ['notice', 'إنذار على يد محضر'], ['memo', 'مذكرة دفاع'], ['lease', 'عقد إيجار'], ['sale', 'عقد بيع'], ['complaint', 'بلاغ للنيابة'], ['poa_request', 'طلب / التماس']];
+
+/* ---------- drafting page (📝) ---------- */
+const DRAFT_TYPES = [
+  { k: 'lawsuit', ic: '⚖️', t: 'صحيفة دعوى', d: 'لرفع دعوى: ديباجة الإعلان، الوقائع، الأسانيد والطلبات', need: ['المدعي وعنوانه', 'المدعى عليه وعنوانه', 'المحكمة المختصة', 'الوقائع بالتواريخ', 'طلباتك من المحكمة'],
+    ph: 'مثال: موكلي كريم عادل المقيم ... اشترى من شريف منصور المقيم ... عربية بعقد بيع ابتدائي بتاريخ ... بمبلغ ... ودفع المبلغ كامل، والبائع رافض ينقل الملكية. عايزين دعوى صحة ونفاذ.' },
+  { k: 'notice', ic: '📮', t: 'إنذار على يد محضر', d: 'تكليف رسمي بالسداد أو التسليم أو الإخلاء قبل المحكمة', need: ['الطالب وعنوانه', 'المنذَر وعنوانه', 'المطلوب منه بالظبط', 'المبالغ أو المدة'],
+    ph: 'مثال: المؤجر أحمد محمود المقيم ... والمستأجر محمد سعيد المقيم ... بعقد إيجار بتاريخ ... بأجرة ... ومتأخر عن سداد شهور ... بإجمالي ...' },
+  { k: 'memo', ic: '🛡️', t: 'مذكرة دفاع', d: 'دفاع في دعوى منظورة: الوقائع، الدفوع الشكلية والموضوعية', need: ['رقم الدعوى والمحكمة والجلسة', 'صفة موكلك', 'وقائع الدعوى', 'نقاط دفاعك'],
+    ph: 'مثال: الدعوى رقم ... لسنة ... محكمة ... جلسة ... موكلي المدعى عليه ... المدعي بيطالب بـ ... ودفاعنا إن ...' },
+  { k: 'lease', ic: '🏠', t: 'عقد إيجار', d: 'عقد كامل البنود: المدة، الأجرة، التأمين، الصيانة والفسخ', need: ['المؤجر والمستأجر', 'وصف العين وعنوانها', 'المدة والأجرة', 'التأمين وطريقة الدفع'],
+    ph: 'مثال: المؤجر ... والمستأجر ... شقة في ... مساحتها ... لمدة سنة من ... بأجرة شهرية ... وتأمين ...' },
+  { k: 'sale', ic: '🤝', t: 'عقد بيع', d: 'بيع عقار أو عربية أو منقول: الثمن، التسليم والضمانات', need: ['البائع والمشتري', 'وصف المبيع', 'الثمن وطريقة السداد', 'ميعاد التسليم'],
+    ph: 'مثال: البائع ... والمشتري ... بيع عربية ماركة ... موديل ... رقم شاسيه ... بثمن ... يدفع مقدم ... والباقي ...' },
+  { k: 'complaint', ic: '🚨', t: 'بلاغ للنيابة', d: 'بلاغ أو شكوى بالوقائع والوصف القانوني والطلبات', need: ['مقدم البلاغ', 'المشكو في حقه', 'الواقعة بالتاريخ والمكان', 'الأدلة والشهود'],
+    ph: 'مثال: أنا ... يوم ... في ... حصل إن ... والشهود ... وعندي ...' },
+  { k: 'poa_request', ic: '📄', t: 'طلب / التماس', d: 'طلب رسمي لجهة أو محكمة: تظلم، التماس، طلب صورة…', need: ['الجهة المقدَّم لها', 'مقدم الطلب', 'موضوع الطلب', 'المرفقات'],
+    ph: 'مثال: طلب لمحكمة ... لاستخراج صورة رسمية من الحكم رقم ... لسنة ...' },
+];
 const DRAFT_RE = /(صياغ[ةه]|صيغ[ةه]\s+(?:صحيف|إنذار|انذار|مذكر|عقد)|اكتب(?:لي|ل[يى])?\s+(?:صحيف|إنذار|انذار|مذكر|عقد|بلاغ)|حضّ?رلي\s+(?:صحيف|إنذار|انذار|مذكر|عقد))/;
 let draftType = 'lawsuit';
-$('dTypes').innerHTML = DRAFT_TYPES.map(([k, t]) => '<button class="opt" type="button" data-k="' + k + '">' + t + '</button>').join('');
-$('dTypes').querySelectorAll('.opt').forEach(b => b.onclick = () => { draftType = b.dataset.k; $('dTypes').querySelectorAll('.opt').forEach(x => x.classList.toggle('on', x === b)); });
+$('dpTypes').innerHTML = DRAFT_TYPES.map(x => '<button class="dp-card" type="button" data-k="' + x.k + '"><span class="ic">' + x.ic + '</span><b>' + x.t + '</b><small>' + x.d + '</small></button>').join('');
+$('dpTypes').querySelectorAll('.dp-card').forEach(b => b.onclick = () => setDraftType(b.dataset.k));
+function setDraftType(k) {
+  draftType = k; const x = DRAFT_TYPES.find(t => t.k === k) || DRAFT_TYPES[0];
+  $('dpTypes').querySelectorAll('.dp-card').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  $('dpNeed').innerHTML = '<span>اكتب على الأقل:</span>' + x.need.map(n => '<span class="n">' + n + '</span>').join('');
+  $('dpFacts').placeholder = x.ph;
+}
 $('draftBtn').onclick = () => openDraft(q.value.trim());
-$('dCancel').onclick = closeAll;
-function guessType(t) { return /إنذار|انذار/.test(t) ? 'notice' : /مذكر/.test(t) ? 'memo' : /عقد\s*بيع|بيع/.test(t) ? 'sale' : /عقد|إيجار|ايجار/.test(t) && /عقد/.test(t) ? 'lease' : /بلاغ|شكو|نياب/.test(t) ? 'complaint' : /طلب|التماس/.test(t) ? 'poa_request' : 'lawsuit'; }
+$('draftNavBtn').onclick = () => openDraft('');
+$('dpClose').onclick = () => $('draftView').classList.add('hidden');
+function guessType(t) { return /إنذار|انذار/.test(t) ? 'notice' : /مذكر/.test(t) ? 'memo' : /بيع/.test(t) ? 'sale' : /عقد/.test(t) ? 'lease' : /بلاغ|شكو|نياب/.test(t) ? 'complaint' : /طلب|التماس|تظلم/.test(t) ? 'poa_request' : 'lawsuit'; }
+function draftLeft() { const m = me && me.usage && me.usage.maps; return m && typeof m.limit_draft === 'number' ? m.limit_draft - (m.draft || 0) : null; }
 function openDraft(text, type) {
   const lim = me && me.usage && me.usage.limits ? me.usage.limits.daily_drafts : 0;
   if (!lim) { openPro(); return; }
-  draftType = type || (text ? guessType(text) : draftType);
-  $('dTypes').querySelectorAll('.opt').forEach(x => x.classList.toggle('on', x.dataset.k === draftType));
-  if (text) $('dFacts').value = text;
+  setDraftType(type || (text ? guessType(text) : draftType));
+  if (text) $('dpFacts').value = text;
   const hasChat = !!$('thread').querySelector('.msg');
-  $('dUseChat').checked = hasChat; $('dUseChat').disabled = !hasChat;
-  $('dHint').textContent = me.user.role === 'admin' ? '' : 'حد الصياغة: ' + lim + ' مستندات في اليوم.';
-  $('scrim').classList.remove('hidden'); $('draftModal').classList.remove('hidden'); $('dFacts').focus();
+  $('dpChatWrap').classList.toggle('hidden', !hasChat); $('dpUseChat').checked = false;
+  const left = draftLeft();
+  $('dpQuota').textContent = me.user.role === 'admin' ? 'أدمن: من غير حد' : (left != null ? 'فاضل لك ' + Math.max(0, left) + ' من ' + lim + ' النهارده' : lim + ' مستندات في اليوم');
+  $('dpHint').textContent = '';
+  $('draftView').classList.remove('hidden');
+  loadDraftList();
+  if (text) setTimeout(() => $('dpFacts').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
 }
-$('dGo').onclick = () => {
-  const facts = $('dFacts').value.trim(), useChat = $('dUseChat').checked;
-  if (facts.length < 15 && !useChat) { $('dHint').textContent = 'اكتب الوقائع وبيانات الأطراف الأول (أو اختار استخدام المحادثة).'; return; }
-  closeAll(); $('dFacts').value = '';
-  sendDraft(draftType, facts, useChat);
-};
-async function sendDraft(type, facts, useChat) {
-  if (busy) return;
-  busy = true; $('send').disabled = true; $('welcome').classList.add('hidden');
-  const tname = (DRAFT_TYPES.find(x => x[0] === type) || [, 'مستند'])[1];
-  addUser('📝 صياغة ' + tname + (facts ? '\n' + facts.slice(0, 400) + (facts.length > 400 ? '…' : '') : '\n(من وقائع المحادثة)'));
-  const bot = addBot(), body = bot.querySelector('.md');
-  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span>بيدوّر على السند القانوني ويصيغ ' + tname + '…</span></div>';
+async function loadDraftList() {
+  const box = $('dpList'); box.innerHTML = '<div class="muted">بيحمّل...</div>';
   try {
-    const r = await fetch(API.base + '/draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sessionId: session, docType: type, facts, useChat }) });
+    const r = await api('drafts'); const list = r.drafts || [];
+    box.innerHTML = list.length ? '' : '<div class="muted">لسه معملتش مستندات. أول مستند هيظهر هنا.</div>';
+    list.forEach(x => {
+      const el = document.createElement('div'); el.className = 'r';
+      const t = DRAFT_TYPES.find(y => y.k === x.type);
+      el.innerHTML = '<span style="font-size:20px">' + (t ? t.ic : '📄') + '</span><span class="n"><b></b> <span class="muted"></span></span><span class="muted">' + ago(x.at) + '</span>';
+      el.querySelector('b').textContent = x.title || '(بدون عنوان)'; el.querySelector('.n .muted').textContent = '· ' + (x.type_name || '');
+      el.onclick = async () => { const d = await api('draft_get', { id: x.id }); if (d.ok) showDraftResult(d.draft, d.id); };
+      box.appendChild(el);
+    });
+  } catch (e) { box.innerHTML = '<div class="err">مقدرتش أحمّل المستندات.</div>'; }
+}
+function draftHolder() {
+  $('dpResultStep').classList.remove('hidden');
+  const h = document.createElement('div'); h.innerHTML = '<div class="md"></div><div class="foot"></div>';
+  $('dpResult').innerHTML = ''; $('dpResult').appendChild(h);
+  setTimeout(() => $('dpResultStep').scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+  return h;
+}
+function showDraftResult(d, id) { const h = draftHolder(); renderDraft(h, d); if (id) addRate(h, { kind: 'map', question: d.request || '', answer: 'map:' + id }); }
+$('dpGo').onclick = async () => {
+  const facts = $('dpFacts').value.trim(), useChat = !$('dpChatWrap').classList.contains('hidden') && $('dpUseChat').checked;
+  if (facts.length < 15 && !useChat) { $('dpHint').textContent = 'اكتب الوقائع وبيانات الأطراف الأول.'; $('dpFacts').focus(); return; }
+  if (busy) return;
+  busy = true; $('dpGo').disabled = true; $('dpHint').textContent = '';
+  const tname = (DRAFT_TYPES.find(x => x.k === draftType) || {}).t || 'المستند';
+  const h = draftHolder(), body = h.querySelector('.md');
+  body.innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span><span>بيدوّر على السند القانوني ويصيغ ' + tname + '… (حوالي 10 ثواني)</span></div>';
+  try {
+    const sid = useChat ? session : 'd' + Date.now().toString(36);
+    const r = await fetch(API.base + '/draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sessionId: sid, docType: draftType, facts, useChat }) });
     let d = await r.json(); if (Array.isArray(d)) d = d[0];
     if (d.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
-    historyDirty = true;
     if (!d.ok || !d.map) {
-      if (d.error === 'failed') { renderFailure(bot, 'draft'); return; }
-      if (d.error === 'upgrade') { body.innerHTML = md(d.output); const b = document.createElement('button'); b.className = 'btn ghost'; b.style.marginTop = '8px'; b.textContent = '✦ اعرف عن Pro'; b.onclick = openPro; body.appendChild(b); return; }
-      body.innerHTML = md(d.output || 'مقدرتش أصيغ المستند.'); body.classList.add('err'); return;
+      if (d.error === 'failed') renderFailure(h, 'draft');
+      else if (d.error === 'upgrade') { body.innerHTML = md(d.output); openPro(); }
+      else { body.innerHTML = md(d.output || 'مقدرتش أصيغ المستند.'); body.classList.add('err'); }
+      return;
     }
-    renderDraft(bot, d.map);
-    if (d.map_id) addRate(bot, { kind: 'map', question: facts, answer: 'map:' + d.map_id });
+    renderDraft(h, d.map);
+    if (d.map_id) addRate(h, { kind: 'map', question: facts, answer: 'map:' + d.map_id });
+    if (me && me.usage && me.usage.maps) { me.usage.maps.draft = (me.usage.maps.draft || 0) + 1; const left = draftLeft(); if (left != null && me.user.role !== 'admin') $('dpQuota').textContent = 'فاضل لك ' + Math.max(0, left) + ' من ' + me.usage.limits.daily_drafts + ' النهارده'; }
+    if (useChat) historyDirty = true;
+    loadDraftList();
   } catch (e) { body.innerHTML = '<span class="err">حصلت مشكلة في الاتصال. جرّب تاني.</span>'; }
-  finally { busy = false; $('send').disabled = !q.value.trim(); scroll(); }
-}
+  finally { busy = false; $('dpGo').disabled = false; }
+};
 const markPh = t => esc(t).replace(/\[[^\]\n]{1,80}\]/g, m => '<mark>' + m + '</mark>');
 function draftText(d) {
   return [d.title, ''].concat(...(d.sections || []).map(s => (s.heading ? [s.heading] : []).concat(s.paragraphs, ['']))).join('\n').trim();
@@ -1408,7 +1502,7 @@ function renderDraft(bot, d) {
     w.document.title = d.title || ''; w.document.body.innerHTML = card.querySelector('.paper').innerHTML.replace(/<\/?mark>/g, '');
     w.document.close(); w.focus(); w.print();
   };
-  act.querySelector('[data-a="edit"]').onclick = () => openDraft((d.request || '') + '\n\nتعديلات مطلوبة على الصياغة السابقة: ', d.doc_type);
+  act.querySelector('[data-a="edit"]').onclick = () => { openDraft((d.request || '') + '\n\nتعديلات مطلوبة على الصياغة السابقة: ', d.doc_type); setTimeout(() => { const f = $('dpFacts'); f.scrollIntoView({ behavior: 'smooth', block: 'center' }); f.focus(); f.setSelectionRange(f.value.length, f.value.length); }, 80); };
   card.appendChild(act);
   body.appendChild(card);
   foot.innerHTML = '<span class="tag">' + esc(d.type_name || 'مستند') + '</span><span class="tag">مسودة: لازم تتراجع من محامي قبل الاستخدام</span>';

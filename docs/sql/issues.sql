@@ -18,6 +18,7 @@ create table if not exists sl_issues (
   exec_id text,
   attempts int not null default 1,
   status text not null default 'open' check (status in ('open', 'retrying', 'resolved', 'dismissed')),
+  meta jsonb,                      -- what a resend needs besides the question (e.g. the draft's document type)
   answer text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -25,6 +26,7 @@ create table if not exists sl_issues (
   resolved_by uuid
 );
 create index if not exists sl_issues_status on sl_issues (status, created_at desc);
+alter table sl_issues add column if not exists meta jsonb;
 alter table sl_issues enable row level security;
 
 create table if not exists sl_notifications (
@@ -49,7 +51,7 @@ declare
   q text := left(coalesce(p->>'question', ''), 4000);
   iss sl_issues;
 begin
-  if p_user is null or p_kind not in ('free', 'pro', 'mindmap', 'timeline') then return; end if;
+  if p_user is null or p_kind not in ('free', 'pro', 'mindmap', 'timeline', 'draft') then return; end if;
   if retry_of is not null then
     select * into iss from sl_issues where id = retry_of and user_id = p_user;
     delete from sl_sessions where token = coalesce(p->>'token', '') and purpose = 'retry';
@@ -62,7 +64,8 @@ begin
              resolved_at = now(), updated_at = now() where id = iss.id;
       insert into sl_notifications (user_id, issue_id, session_id, title, body)
       values (p_user, iss.id, iss.session_id,
-              case when iss.kind = 'mindmap' then 'خريطتك الذهنية جهزت' when iss.kind = 'timeline' then 'الخط الزمني جهز' else 'وصل رد على سؤالك' end,
+              case when iss.kind = 'mindmap' then 'خريطتك الذهنية جهزت' when iss.kind = 'timeline' then 'الخط الزمني جهز'
+                   when iss.kind = 'draft' then 'المستند اللي طلبته جهز' else 'وصل رد على سؤالك' end,
               left(iss.question, 140));
     end if;
     return;
@@ -73,8 +76,8 @@ begin
    where user_id = p_user and session_id = p_session and question = q and status in ('open', 'retrying')
   returning * into iss;
   if iss.id is null then
-    insert into sl_issues (user_id, nickname, session_id, kind, question, error, exec_id)
-    values (p_user, p_name, nullif(p_session, ''), p_kind, q, left(p->>'error', 500), p->>'exec_id');
+    insert into sl_issues (user_id, nickname, session_id, kind, question, error, exec_id, meta)
+    values (p_user, p_name, nullif(p_session, ''), p_kind, q, left(p->>'error', 500), p->>'exec_id', p->'meta');
   end if;
 end $$;
 
@@ -114,7 +117,7 @@ begin
       'issues', coalesce((select jsonb_agg(x order by x->>'updated_at' desc) from (
         select jsonb_build_object('id', i.id, 'user_id', i.user_id, 'name', coalesce(i.nickname, split_part(u.email, '@', 1)), 'email', u.email,
                                   'plan', case when u.role = 'admin' then 'admin' else u.plan end, 'session', i.session_id, 'kind', i.kind,
-                                  'question', i.question, 'error', i.error, 'exec_id', i.exec_id, 'attempts', i.attempts, 'status', i.status,
+                                  'question', i.question, 'error', i.error, 'exec_id', i.exec_id, 'attempts', i.attempts, 'status', i.status, 'meta', i.meta,
                                   'answer', left(i.answer, 600), 'created_at', i.created_at, 'updated_at', i.updated_at, 'resolved_at', i.resolved_at) x
           from sl_issues i left join sl_users u on u.id = i.user_id
          where case when st = 'all' then true when st = 'open' then i.status in ('open', 'retrying') else i.status = st end
@@ -130,7 +133,7 @@ begin
     delete from sl_sessions where user_id = iss.user_id and purpose = 'retry' and expires_at < now();
     insert into sl_sessions (token, user_id, expires_at, purpose) values (t, iss.user_id, now() + interval '10 minutes', 'retry');
     update sl_issues set status = 'retrying', updated_at = now() where id = iss.id;
-    return jsonb_build_object('ok', true, 'token', t, 'session', iss.session_id, 'question', iss.question, 'kind', iss.kind);
+    return jsonb_build_object('ok', true, 'token', t, 'session', iss.session_id, 'question', iss.question, 'kind', iss.kind, 'meta', iss.meta);
 
   elsif p_action = 'admin_issue_set' then
     if st not in ('open', 'resolved', 'dismissed') then return jsonb_build_object('ok', false, 'error', 'حالة مش صحيحة'); end if;

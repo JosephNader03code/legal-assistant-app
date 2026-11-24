@@ -13,6 +13,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 | Main workflow "Agents to Apps - RAG Systems" | https://joe03.app.n8n.cloud/workflow/Urs8CLRcjtJbkZ8G |
 | Search tool workflow "Smart Lawyer - Search Tool" | https://joe03.app.n8n.cloud/workflow/ySmFhCajtWfNI3XG |
 | Embed backfill workflow "Smart Lawyer - Embed Backfill" (active, hourly) | https://joe03.app.n8n.cloud/workflow/B8VdNmu5zrqrB2uu |
+| Drafting workflow "Smart Lawyer - Drafting" (POST /webhook/draft) | https://joe03.app.n8n.cloud/workflow/fwil1JhXBYkILfGM |
 | Website workflow "Smart Lawyer - Test Website" | https://joe03.app.n8n.cloud/workflow/sPTOi4r3hCBgsbvW |
 | Supabase project | https://supabase.com/dashboard/project/rnjnozbptnqeskkyjqae |
 
@@ -26,6 +27,8 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/llm_router.sql`: model chain (`sl_llm`, `sl_llm_calls`, `sl_llm_pick`, `sl_llm_wait`, `sl_llm_fail`, `sl_llm_status`).
 - `docs/sql/admin.sql`: admin dashboard API (`sl_admin`: admin_overview / admin_users / admin_user_log / admin_user_chats / admin_user_messages / admin_rate_question / admin_create_user / admin_update_user / admin_update_plans), `sl_clean_limits`, and `sl_question_review` (the admin's 👍 good question / 👎 not useful on users' questions, text copied; another labelled dataset).
 - `docs/sql/issues.sql`: users' problems and notifications (`sl_issues`, `sl_notifications`, `sl_issue_track`, `sl_notif_api`, `sl_issue_admin`, `sl_sessions.purpose = 'retry'`).
+- `docs/sql/drafts.sql`: document drafting (`sl_draft_types`, `sl_draft_take`, `sl_draft_finish`, plan limit `daily_drafts`).
+- `docs/gen_draft_workflow.py`: generates the Drafting workflow's SDK code (`draftwf.js`) with its prompts; edit the prompts here and push them with `update_workflow` (`Draft Prompt` / `Draft Parse` jsCode).
 - `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
 - `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
@@ -64,6 +67,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session/feedback/notifications/notifications_read/admin_*
                      ──POST /webhook/Chat────▶ Main workflow (chat)
                      ──POST /webhook/mindmap─▶ Main workflow (case mind map + timeline: token, sessionId, text)
+                     ──POST /webhook/draft───▶ Drafting workflow (token, sessionId, docType, facts, useChat)
                      ──POST /webhook/upload──▶ Main workflow (upload, multipart: data, filename, contentType, token, target=mine|public)
 ```
 
@@ -124,6 +128,14 @@ Every chat / map request writes one row to `sl_request_log` (Postgres nodes `Log
 - **🔁 إعادة إرسال:** `admin_issue_retry` mints a 10-minute session with `purpose = 'retry'`; the admin's browser posts the same question to `/Chat` (or `/mindmap`) with that token and `retryOf = issue id`. A retry session is **not counted** against the user's messages or map quota; the answer lands in the user's own chat. `Log Free` / `Log Pro` / `Log Map` pass `retry_of`, `question`, `answer`; on success the issue becomes `resolved`, the retry token is deleted and a row in `sl_notifications` is created.
 - The user's app polls `notifications` every 45 s: 🔔 badge + toast (+ a system notification when the tab is hidden and permission was given); opening one opens that chat; if it is the chat on screen it reloads.
 
+### Document drafting (Pro, 📝)
+
+Separate workflow **Smart Lawyer - Drafting** (n8n was chosen over a coded backend: it reuses auth, quotas, the model router, the log and the issues flow; the .docx is built in the browser):
+`Draft Webhook` → `Draft Auth` (`sl_draft_take`: auth, `daily_drafts` quota (free 0 → upsell, pro 10), chat + uploaded-file context when `useChat`, model pick from the `long` chain = main without qwen) → `Draft Allowed?` → `Find Law` (calls the Search Tool with the type + facts) → `Draft Prompt` (type guide + facts + 3 sources) → `Draft Writer` (Groq, `Reasoning: low`, max tokens = 7600 − request size) → `Draft Parse` (JSON: known_facts, title, sections, legal_basis, missing; **every article number is checked against the retrieved sources** → `verified` / `unverified_articles`) → `Draft Save` (`sl_draft_finish` → `sl_maps` with `data.type = 'draft'`, or refund) → `Respond Draft` → `Log Draft` (kind `draft`, failures open an issue with `meta.doc_type` so the admin can resend).
+- Types: lawsuit (صحيفة دعوى), notice (إنذار على يد محضر), memo (مذكرة دفاع), lease, sale, complaint (بلاغ للنيابة), poa_request (طلب/التماس).
+- UI: 📝 button or typing "اكتبلي إنذار/صحيفة/مذكرة/عقد…" opens the dialog; the result is shown as a paper page with `[placeholders]` highlighted, legal basis with ✓/⚠️, missing data, the facts used; Word (.docx, hand-written store-only ZIP, RTL), copy, print, edit and redraft. Drafts appear in chat history and can be rated.
+- Measured: notice ≈ 8 s, lawsuit ≈ 8 s (gpt-oss-120b). Without `Reasoning: low` the model spent all 2500 tokens thinking and returned nothing.
+
 ### Mind map / timeline flow (main workflow, group "Case mind map + timeline")
 
 The mind map and the timeline are **two separate features** (body `type: 'mindmap' | 'timeline'`), each with its own daily quota (`sl_feature_usage.feature` = `map` / `timeline`).
@@ -176,7 +188,7 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
   - Private rows have userId = sl_users.id.
   - Function `match_documents`; trigram index on content.
 - **`n8n_chat_histories`**: LangChain memory, session_id = `userId:sessionId`.
-- **`sl_plans`** (edited from the admin dashboard): daily_messages, daily_maps, daily_timelines, daily_uploads, max_docs. Defaults: free 6 / 1 / 1 / 1 / 10, pro 300 / 8 / 8 / 20 / 30. Admins are unlimited.
+- **`sl_plans`** (edited from the admin dashboard): daily_messages, daily_maps, daily_timelines, daily_uploads, max_docs. daily_drafts too. Defaults: free 6 / 1 / 1 / 1 / 10 / 0 drafts, pro 300 / 8 / 8 / 20 / 30 / 10 drafts. Admins are unlimited.
 - **`sl_users.limits`** (jsonb): per-user overrides of any of those keys; `sl_limits(user_id)` returns the effective limits and everything (chat, maps, uploads, log) uses it. **`sl_users.disabled`** blocks login and kills sessions.
 - **`sl_users`**: plan free|pro, role user|admin, bcrypt via pgcrypto.
 - **`sl_sessions`**: 30-day tokens.

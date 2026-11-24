@@ -57,6 +57,7 @@ begin
       from sl_llm l
      where l.active and l.down_until < now()
        and case when p_chain = 'light' then l.rank_light is not null else l.rank_main is not null end
+       and not (p_chain = 'long' and l.id like 'qwen/%')
      order by case when p_chain = 'light' then l.rank_light else l.rank_main end
   loop
     if m.used_min + least(p_tokens, m.tpm) <= m.tpm and m.used_day < m.rpd
@@ -70,6 +71,7 @@ begin
       select l.id from sl_llm l
        where l.active and not (l.id = any(picked)) and l.down_until < now() + interval '2 minutes'
          and case when p_chain = 'light' then l.rank_light is not null else l.rank_main is not null end
+       and not (p_chain = 'long' and l.id like 'qwen/%')
        order by (l.down_until < now()) desc,
                 coalesce((select sum(tokens) from sl_llm_calls c where c.model = l.id and c.at > now() - interval '1 minute'), 0),
                 case when p_chain = 'light' then l.rank_light else l.rank_main end
@@ -93,6 +95,7 @@ language sql stable security definer set search_path = public as $$
            (select min(at) from sl_llm_calls c where c.model = l.id and c.at > now() - interval '1 minute') as oldest
       from sl_llm l
      where l.active and case when p_chain = 'light' then l.rank_light is not null else l.rank_main is not null end
+       and not (p_chain = 'long' and l.id like 'qwen/%')
   )
   select case
     when exists (select 1 from m where down_until < now() and used + least(p_tokens, tpm) <= tpm) then 0

@@ -28,7 +28,7 @@ create or replace function sl_clean_limits(p jsonb) returns jsonb
 language sql immutable set search_path = public as $$
   select coalesce(jsonb_object_agg(k, least(greatest((v #>> '{}')::numeric, 0), 100000)::int), '{}'::jsonb)
     from jsonb_each(coalesce(p, '{}'::jsonb)) e(k, v)
-   where k in ('daily_messages', 'daily_maps', 'daily_timelines', 'daily_uploads', 'max_docs')
+   where k in ('daily_messages', 'daily_maps', 'daily_timelines', 'daily_uploads', 'max_docs', 'daily_drafts')
      and (v #>> '{}') ~ '^\s*[0-9]+\s*$'
 $$;
 
@@ -60,6 +60,7 @@ begin
         'uploads_today', (select coalesce(sum(n), 0) from sl_feature_usage where day = d and feature = 'upload'),
         'uploaders_today', (select count(*) from sl_feature_usage where day = d and feature = 'upload' and n > 0),
         'maps_today', (select coalesce(sum(n), 0) from sl_feature_usage where day = d and feature = 'map'),
+        'drafts_today', (select coalesce(sum(n), 0) from sl_feature_usage where day = d and feature = 'draft'),
         'timelines_today', (select coalesce(sum(n), 0) from sl_feature_usage where day = d and feature = 'timeline'),
         'quota_users_today', (select count(distinct user_id) from sl_request_log where day = d and quota_hit),
         'failed_today', (select count(*) from sl_request_log where day = d and kind in ('free', 'pro') and error is not null),
@@ -222,7 +223,8 @@ begin
       daily_maps      = coalesce(least(greatest((x->>'daily_maps')::int, 0), 100000), pl.daily_maps),
       daily_timelines = coalesce(least(greatest((x->>'daily_timelines')::int, 0), 100000), pl.daily_timelines),
       daily_uploads   = coalesce(least(greatest((x->>'daily_uploads')::int, 0), 100000), pl.daily_uploads),
-      max_docs        = coalesce(least(greatest((x->>'max_docs')::int, 0), 100000), pl.max_docs)
+      max_docs        = coalesce(least(greatest((x->>'max_docs')::int, 0), 100000), pl.max_docs),
+      daily_drafts    = coalesce(least(greatest((x->>'daily_drafts')::int, 0), 100000), pl.daily_drafts)
     from jsonb_array_elements(coalesce(p->'plans', '[]'::jsonb)) x
     where pl.plan = x->>'plan';
     return jsonb_build_object('ok', true, 'plans', (select jsonb_agg(to_jsonb(pl) order by pl.plan) from sl_plans pl));

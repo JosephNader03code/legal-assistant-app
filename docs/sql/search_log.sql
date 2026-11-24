@@ -136,6 +136,7 @@ begin
                                + (1500 + inp) + case when p->>'review' in ('pass', 'fixed') then 2000 + outp + src else 0 end) / 3.0)
     when k = 'clarify' then ceil((2500 + inp + outp) / 3.0)
     when k in ('mindmap', 'timeline') then ceil((2000 + inp + outp) / 3.0)
+    when k = 'draft' then ceil((3500 + inp + src + outp) / 3.0)
     else 0 end;
   insert into sl_request_log (user_id, nickname, plan, session_id, kind, msg_no, msg_limit, quota_hit,
                               input_chars, output_chars, sources_chars, searches, tokens_est, latency_ms,

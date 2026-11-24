@@ -120,6 +120,10 @@ begin
     j := sl_user_json(v_token);
     if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
     return sl_api_ext(p_action, p, j);                         -- history_maps.sql
+  elsif p_action in ('notifications', 'notifications_read') then
+    j := sl_user_json(v_token);
+    if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
+    return sl_notif_api(p_action, p, j);                       -- issues.sql
   elsif p_action like 'admin\_%' then
     j := sl_user_json(v_token);
     if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized'); end if;
@@ -146,9 +150,15 @@ end $$;
 create or replace function sl_consume(p_token text) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare j jsonb; d date := (now() at time zone 'Africa/Cairo')::date;
+  is_retry boolean := exists (select 1 from sl_sessions where token = p_token and purpose = 'retry');   -- admin resend (issues.sql)
 begin
   j := sl_user_json(p_token);
   if j is null then return jsonb_build_object('ok', false, 'error', 'unauthorized', 'message', 'لازم تسجل دخول الأول.'); end if;
+  if is_retry then
+    return jsonb_build_object('ok', true, 'user_id', j->'user'->>'id',
+      'plan', case when j->'user'->>'role' = 'admin' then 'pro' else j->'user'->>'plan' end,
+      'remaining', (j->'usage'->>'limit')::int - (j->'usage'->>'used')::int);
+  end if;
   if (j->'usage'->>'used')::int >= (j->'usage'->>'limit')::int then
     return jsonb_build_object('ok', false, 'error', 'quota', 'message',
       case when j->'user'->>'plan' = 'free'

@@ -130,7 +130,7 @@ begin
   lim := (sl_limits(uid)->>(case when feat = 'timeline' then 'daily_timelines' else 'daily_maps' end))::int;
   select coalesce(n, 0) into used from sl_feature_usage where user_id = uid and day = d and feature = feat;
   used := coalesce(used, 0);
-  if used >= lim then
+  if used >= lim and not exists (select 1 from sl_sessions where token = p_token and purpose = 'retry') then
     return jsonb_build_object('ok', false, 'error', 'quota', 'type', feat, 'output',
       case when is_pro then 'وصلت للحد اليومي لـ' || what || ' (' || lim || ' مرات). ارجع بكرة.'
            else 'خلص استخدامك المجاني لـ' || what || ' النهارده (' || case lim when 1 then 'مرة واحدة' when 2 then 'مرتين' else lim || ' مرات' end || '). ارجع بكرة أو اشترك في Pro.' end);
@@ -154,8 +154,10 @@ begin
     return jsonb_build_object('ok', false, 'error', 'empty', 'type', feat, 'output', 'اكتب وقائع القضية الأول (أو اسأل عنها في المحادثة) وبعدين اطلب ' || what || '.');
   end if;
 
-  insert into sl_feature_usage (user_id, day, feature, n) values (uid, d, feat, 1)
-    on conflict (user_id, day, feature) do update set n = sl_feature_usage.n + 1;
+  if not exists (select 1 from sl_sessions where token = p_token and purpose = 'retry') then   -- admin resend is free (issues.sql)
+    insert into sl_feature_usage (user_id, day, feature, n) values (uid, d, feat, 1)
+      on conflict (user_id, day, feature) do update set n = sl_feature_usage.n + 1;
+  end if;
   return jsonb_build_object('ok', true, 'user_id', uid, 'session_key', key, 'after_msg_id', coalesce(last_id, 0),
     'type', case when feat = 'timeline' then 'timeline' else 'mindmap' end,
     'llm', sl_llm_pick('main', 4000),                          -- llm_router.sql

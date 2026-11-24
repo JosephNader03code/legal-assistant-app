@@ -25,6 +25,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 - `docs/sql/feedback.sql`: 👍/👎 votes in `sl_feedback` (question, answer, rating, plan), one vote per answer (md5). Doubles as the future fine-tuning dataset: `select question, answer from sl_feedback where rating = 1 and kind = 'chat'`.
 - `docs/sql/llm_router.sql`: model chain (`sl_llm`, `sl_llm_calls`, `sl_llm_pick`, `sl_llm_wait`, `sl_llm_fail`, `sl_llm_status`).
 - `docs/sql/admin.sql`: admin dashboard API (`sl_admin`: admin_overview / admin_users / admin_user_log / admin_user_chats / admin_user_messages / admin_rate_question / admin_create_user / admin_update_user / admin_update_plans), `sl_clean_limits`, and `sl_question_review` (the admin's 👍 good question / 👎 not useful on users' questions, text copied; another labelled dataset).
+- `docs/sql/issues.sql`: users' problems and notifications (`sl_issues`, `sl_notifications`, `sl_issue_track`, `sl_notif_api`, `sl_issue_admin`, `sl_sessions.purpose = 'retry'`).
 - `docs/sql/search_log.sql`: search that survives Gemini outages (`sl_search` hybrid vector + Arabic full-text, circuit breaker `sl_embed_ok` / `sl_embed_trip`) and the request log (`sl_request_log`, `sl_log`, view `sl_daily_usage`, `sl_log_set_tokens`).
 - `docs/backfill_tokens.py`: fills real token counts into `sl_request_log` from n8n execution data (run from a Claude session with the n8n MCP token).
 - `docs/sql/history_maps.sql`: chat history API (`sl_api_ext`: sessions / history / delete_session) and case mind maps (`sl_map_take`, `sl_map_finish`, tables `sl_maps`, `sl_feature_usage`, column `sl_plans.daily_maps`).
@@ -60,7 +61,7 @@ Egyptian legal assistant: a multi-agent chatbot (free tier for the public, Pro t
 ## Architecture
 
 ```
-Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session/feedback/admin_*
+Browser (index.html) ──POST /webhook/sl-api──▶ Website workflow ─▶ Postgres sl_api(action, body)   signup/login/me/logout/docs/sessions/history/delete_session/feedback/notifications/notifications_read/admin_*
                      ──POST /webhook/Chat────▶ Main workflow (chat)
                      ──POST /webhook/mindmap─▶ Main workflow (case mind map + timeline: token, sessionId, text)
                      ──POST /webhook/upload──▶ Main workflow (upload, multipart: data, filename, contentType, token, target=mine|public)
@@ -115,6 +116,14 @@ Every chat / map request writes one row to `sl_request_log` (Postgres nodes `Log
 - Real tokens: n8n stores `tokenUsage` per LLM call in the execution data, which the workflow cannot read. `python3 docs/backfill_tokens.py EXEC_ID…` prints `sl_log_set_tokens(...)` calls. To automate it, add an n8n API credential and a scheduled workflow.
 - Daily report: `select * from sl_daily_usage where day = current_date order by last_at desc;` (answers, chats, maps, when the quota was hit and after how many messages, blocked attempts, tokens, avg seconds, answers made with keyword search).
 
+### Problems → admin alert → resend → user notification
+
+- A failed chat answer (output starting with "معلش", the real agent error is logged) or a failed map makes `sl_log` → `sl_issue_track` open a row in `sl_issues` (one open issue per user + chat + question; repeats raise `attempts`).
+- The user sees "اتبلغ فريق الدعم… هيوصلك الرد هنا" with a "🔔 بلغني على الموبايل" button (browser notifications).
+- Admins: the app polls `admin_issues` every 45 s → red count on the avatar / menu, a toast "⚠️ <name> عنده مشكلة", and the dashboard tab **⚠️ المشاكل** (question, error, attempts, n8n execution link, "📋 نسخ التفاصيل لـ Claude", "افتح شات المستخدم", resolve / dismiss / reopen).
+- **🔁 إعادة إرسال:** `admin_issue_retry` mints a 10-minute session with `purpose = 'retry'`; the admin's browser posts the same question to `/Chat` (or `/mindmap`) with that token and `retryOf = issue id`. A retry session is **not counted** against the user's messages or map quota; the answer lands in the user's own chat. `Log Free` / `Log Pro` / `Log Map` pass `retry_of`, `question`, `answer`; on success the issue becomes `resolved`, the retry token is deleted and a row in `sl_notifications` is created.
+- The user's app polls `notifications` every 45 s: 🔔 badge + toast (+ a system notification when the tab is hidden and permission was given); opening one opens that chat; if it is the chat on screen it reloads.
+
 ### Mind map / timeline flow (main workflow, group "Case mind map + timeline")
 
 The mind map and the timeline are **two separate features** (body `type: 'mindmap' | 'timeline'`), each with its own daily quota (`sl_feature_usage.feature` = `map` / `timeline`).
@@ -154,10 +163,11 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 - When nothing has room, `Models Busy?` → `Wait For Capacity` (≤ 20 s, it holds an n8n concurrency slot) before answering.
 - Log nodes report rate-limited models; `sl_llm_fail` pauses them 65 s, or 30 min near the daily limit; a pause is never shortened.
 - `maxTokensToSample` is sized per role (free 1200, pro 2500, light 1000, map 2500) because **Groq counts max_tokens against the per-minute limit up front**; 4096 made every second call fail.
-- Search results are smaller for free (`*_lite` scope: 3 × 900 chars) and pro (4 × 1300); AI Agent maxIterations 8. Free Agent does not retry (retries caused 40+ calls per question).
+- Search results are smaller for free (`*_lite` scope: 3 × 900 chars) and pro (4 × 1300); AI Agent maxIterations 8. Free Agent: maxIterations 6 (3 was too few: with weak keyword results it searched 3 times and stopped with no answer), prompt says answer after at most 2 searches; it does not retry (retries caused 40+ calls per question).
+- **qwen3.8-27b has an output-tokens-per-minute limit of 1000** on Groq free: every model node caps `maxTokensToSample` at 900 when the picked model is qwen.
 - QA Reviewer: OpenRouter, fallback `LLM Light`. Backup AI Agent: DeepSeek via n8n gateway credits. Case Extractor / Summary: Gemini flash-lite → OpenRouter.
 
-**Measured limits (Groq free, Nov 2026):** gpt-oss-120b / 20b 8k TPM, 200k TPD, 1000 RPD; qwen3.8-27b 7k TPM; allam 6k TPM. One free answer ≈ 6.5k tokens (2–3 calls, each re-sending the earlier search results), so the free tier serves roughly **3 answers a minute and ~70–100 a day** across the chain. The admin dashboard shows the chain's health. More capacity: Groq Dev Tier, $10 OpenRouter credit, or another provider key (e.g. Cerebras free tier) added as a credential + chain entries.
+**Measured limits (Groq free, Nov 2026):** gpt-oss-120b / 20b 8k TPM, 200k TPD, 1000 RPD; qwen3.8-27b 7k TPM and 1k output tokens/min; allam 6k TPM. One free answer ≈ 6.5k tokens (2–3 calls, each re-sending the earlier search results), so the free tier serves roughly **3 answers a minute and ~70–100 a day** across the chain. The admin dashboard shows the chain's health. More capacity: Groq Dev Tier, $10 OpenRouter credit, or another provider key (e.g. Cerebras free tier) added as a credential + chain entries.
 
 ### Database (Supabase, schema public)
 
@@ -196,10 +206,10 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 | قانون إيجار الأماكن رقم 49 لسنة 1977 | ar.wikisource | |
 | قانون التأمينات الاجتماعية والمعاشات رقم 148 لسنة 2019 | ar.wikisource | |
 | قانون البناء الموحد رقم 119 لسنة 2008 | ar.wikisource | |
-| قانون رقم 164 لسنة 2025 - الإيجار القديم (…) | lawyeregypt.net/?p=31926 | 10 articles, added Nov 2026, embeddings pending |
-| قانون رقم 4 لسنة 1996 - الإيجار الجديد (…) وتعديله بالقانون 165 لسنة 2025 | lawyeregypt.net posts 3731 + 31825 | includes the explanatory memo; embeddings pending |
-| قوانين الأحوال الشخصية 25 لسنة 1920 و25 لسنة 1929 المعدلة بالقانون 100 لسنة 1985 | lawyeregypt.net post 5755 | the page ends with "يتبع" (may be incomplete); embeddings pending |
-| دستور جمهورية مصر العربية 2014 (النص الأصلي قبل تعديلات 2019) | ar.wikisource | 247 articles, **without the 2019 amendments**; embeddings pending |
+| قانون رقم 164 لسنة 2025 - الإيجار القديم (…) | lawyeregypt.net/?p=31926 | 10 articles, added Nov 2026 |
+| قانون رقم 4 لسنة 1996 - الإيجار الجديد (…) وتعديله بالقانون 165 لسنة 2025 | lawyeregypt.net posts 3731 + 31825 | includes the explanatory memo |
+| قوانين الأحوال الشخصية 25 لسنة 1920 و25 لسنة 1929 المعدلة بالقانون 100 لسنة 1985 | lawyeregypt.net post 5755 | the page ends with "يتبع" (may be incomplete) |
+| دستور جمهورية مصر العربية 2014 (النص الأصلي قبل تعديلات 2019) | ar.wikisource | 247 articles, **without the 2019 amendments** |
 
 **Missing (TODO):**
 - The new Criminal Procedure Law 174/2025 (+ amendment 160/2026): only as a broken download on lawyeregypt.net, not on Wikisource. Needs the official PDF (upload it from the documents drawer as admin → public library).

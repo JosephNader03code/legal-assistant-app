@@ -154,10 +154,11 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 - When nothing has room, `Models Busy?` → `Wait For Capacity` (≤ 20 s, it holds an n8n concurrency slot) before answering.
 - Log nodes report rate-limited models; `sl_llm_fail` pauses them 65 s, or 30 min near the daily limit; a pause is never shortened.
 - `maxTokensToSample` is sized per role (free 1200, pro 2500, light 1000, map 2500) because **Groq counts max_tokens against the per-minute limit up front**; 4096 made every second call fail.
-- Search results are smaller for free (`*_lite` scope: 3 × 900 chars) and pro (4 × 1300); AI Agent maxIterations 8. Free Agent does not retry (retries caused 40+ calls per question).
+- Search results are smaller for free (`*_lite` scope: 3 × 900 chars) and pro (4 × 1300); AI Agent maxIterations 8. Free Agent: maxIterations 6 (3 was too few: with weak keyword results it searched 3 times and stopped with no answer), prompt says answer after at most 2 searches; it does not retry (retries caused 40+ calls per question).
+- **qwen3.8-27b has an output-tokens-per-minute limit of 1000** on Groq free: every model node caps `maxTokensToSample` at 900 when the picked model is qwen.
 - QA Reviewer: OpenRouter, fallback `LLM Light`. Backup AI Agent: DeepSeek via n8n gateway credits. Case Extractor / Summary: Gemini flash-lite → OpenRouter.
 
-**Measured limits (Groq free, Nov 2026):** gpt-oss-120b / 20b 8k TPM, 200k TPD, 1000 RPD; qwen3.8-27b 7k TPM; allam 6k TPM. One free answer ≈ 6.5k tokens (2–3 calls, each re-sending the earlier search results), so the free tier serves roughly **3 answers a minute and ~70–100 a day** across the chain. The admin dashboard shows the chain's health. More capacity: Groq Dev Tier, $10 OpenRouter credit, or another provider key (e.g. Cerebras free tier) added as a credential + chain entries.
+**Measured limits (Groq free, Nov 2026):** gpt-oss-120b / 20b 8k TPM, 200k TPD, 1000 RPD; qwen3.8-27b 7k TPM and 1k output tokens/min; allam 6k TPM. One free answer ≈ 6.5k tokens (2–3 calls, each re-sending the earlier search results), so the free tier serves roughly **3 answers a minute and ~70–100 a day** across the chain. The admin dashboard shows the chain's health. More capacity: Groq Dev Tier, $10 OpenRouter credit, or another provider key (e.g. Cerebras free tier) added as a credential + chain entries.
 
 ### Database (Supabase, schema public)
 

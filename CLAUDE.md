@@ -206,10 +206,10 @@ Built on `n8n_chat_histories` (session_id `userId:sessionId`, where the client s
 | قانون إيجار الأماكن رقم 49 لسنة 1977 | ar.wikisource | |
 | قانون التأمينات الاجتماعية والمعاشات رقم 148 لسنة 2019 | ar.wikisource | |
 | قانون البناء الموحد رقم 119 لسنة 2008 | ar.wikisource | |
-| قانون رقم 164 لسنة 2025 - الإيجار القديم (…) | lawyeregypt.net/?p=31926 | 10 articles, added Nov 2026, embeddings pending |
-| قانون رقم 4 لسنة 1996 - الإيجار الجديد (…) وتعديله بالقانون 165 لسنة 2025 | lawyeregypt.net posts 3731 + 31825 | includes the explanatory memo; embeddings pending |
-| قوانين الأحوال الشخصية 25 لسنة 1920 و25 لسنة 1929 المعدلة بالقانون 100 لسنة 1985 | lawyeregypt.net post 5755 | the page ends with "يتبع" (may be incomplete); embeddings pending |
-| دستور جمهورية مصر العربية 2014 (النص الأصلي قبل تعديلات 2019) | ar.wikisource | 247 articles, **without the 2019 amendments**; embeddings pending |
+| قانون رقم 164 لسنة 2025 - الإيجار القديم (…) | lawyeregypt.net/?p=31926 | 10 articles, added Nov 2026 |
+| قانون رقم 4 لسنة 1996 - الإيجار الجديد (…) وتعديله بالقانون 165 لسنة 2025 | lawyeregypt.net posts 3731 + 31825 | includes the explanatory memo |
+| قوانين الأحوال الشخصية 25 لسنة 1920 و25 لسنة 1929 المعدلة بالقانون 100 لسنة 1985 | lawyeregypt.net post 5755 | the page ends with "يتبع" (may be incomplete) |
+| دستور جمهورية مصر العربية 2014 (النص الأصلي قبل تعديلات 2019) | ar.wikisource | 247 articles, **without the 2019 amendments** |
 
 **Missing (TODO):**
 - The new Criminal Procedure Law 174/2025 (+ amendment 160/2026): only as a broken download on lawyeregypt.net, not on Wikisource. Needs the official PDF (upload it from the documents drawer as admin → public library).

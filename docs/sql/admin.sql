@@ -71,6 +71,7 @@ begin
         'tokens_est_today', (select coalesce(sum(tokens_est), 0) from sl_request_log where day = d),
         'likes_7d', (select count(*) from sl_feedback where rating = 1 and created_at > now() - interval '7 days'),
         'dislikes_7d', (select count(*) from sl_feedback where rating = -1 and created_at > now() - interval '7 days'),
+        'open_issues', (select count(*) from sl_issues where status in ('open', 'retrying')),
         'good_questions', (select count(*) from sl_question_review where rating = 1),
         'bad_questions', (select count(*) from sl_question_review where rating = -1)),
       'series', (select jsonb_agg(jsonb_build_object('day', g.day,
@@ -209,6 +210,10 @@ begin
     values ((r->>'id')::int, nullif(split_part(r->>'session', ':', 1), '')::uuid, r->>'session', r->>'text', (p->>'rating')::int, me)
     on conflict (msg_id) do update set rating = excluded.rating, reviewed_by = excluded.reviewed_by, at = now();
     return jsonb_build_object('ok', true, 'rating', (p->>'rating')::int);
+
+  -- ---------- users' problems (issues.sql) ----------
+  elsif p_action in ('admin_issues', 'admin_issue_retry', 'admin_issue_set') then
+    return sl_issue_admin(p_action, p, j);
 
   -- ---------- edit the plan limits ----------
   elsif p_action = 'admin_update_plans' then

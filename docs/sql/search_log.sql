@@ -149,6 +149,8 @@ begin
   if coalesce(p->>'llm_error', '') <> '' and jsonb_typeof(p->'models') = 'array' then
     perform sl_llm_fail(p->'models', p->>'llm_error');
   end if;
+  -- a failed answer opens an issue for the admin; a successful resend resolves it and notifies the user (issues.sql)
+  perform sl_issue_track(u.id, coalesce(nullif(u.full_name, ''), split_part(u.email, '@', 1)), sid, k, p);
   return jsonb_build_object('logged', true);
 end $$;
 

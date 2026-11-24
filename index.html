@@ -66,6 +66,8 @@ input,textarea{font:inherit;color:inherit}
 .meter{width:70px;height:6px;border-radius:9px;background:var(--line);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--brand);border-radius:9px;transition:width .3s}
 @media (max-width:640px){.usage span{display:none}.top{padding:10px 14px}.hide-sm{display:none}}
+@media (max-width:480px){.top{gap:6px;padding:8px 10px}.top-r{gap:4px}.top .btn.ghost{padding:7px 8px}.usage{display:none}.top .logo-mark{width:28px;height:28px}.avatar{width:32px;height:32px}}
+html,body{overflow-x:hidden}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--brand-ink);border:0;font-weight:700}
 .menu{position:absolute;left:16px;top:56px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:220px;padding:6px;z-index:20}
 .menu .who{padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:4px;font-size:13px}
@@ -227,7 +229,28 @@ input,textarea{font:inherit;color:inherit}
 .qrate button:hover{border-color:var(--brand)}
 .qrate button.on[data-r="1"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
 .qrate button.on[data-r="-1"]{background:var(--danger);border-color:var(--danger);color:#fff}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 18px;border-radius:10px;font-size:14px;z-index:60}
+.bell{position:relative}
+.bell .cnt,.avatar .cnt{position:absolute;top:-4px;left:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.avatar{position:relative}
+.npanel{position:absolute;left:60px;top:56px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(340px,calc(100vw - 32px));max-height:60vh;overflow-y:auto;padding:6px;z-index:21}
+.npanel .ni{padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+.npanel .ni:hover{background:var(--bg)}
+.npanel .ni.unread{background:var(--brand-soft)}
+.npanel .ni small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.failbox{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--gold-soft)}
+.failbox p{margin:0 0 8px}
+.issue{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.issue.st-open,.issue.st-retrying{border-inline-start:3px solid var(--danger)}
+.issue.st-resolved{border-inline-start:3px solid var(--brand)}
+.issue .ih{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}
+.issue .ih b{font-size:15px}
+.issue .iq{background:var(--bg);border-radius:10px;padding:8px 12px;margin:6px 0;white-space:pre-wrap;font-size:14px}
+.issue .ie{font-family:ui-monospace,monospace;font-size:12px;color:var(--danger);direction:ltr;text-align:left;word-break:break-word}
+.issue .ia{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.issue .ia .btn{padding:7px 12px;font-size:13px}
+.issue .ires{font-size:13px;margin-top:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 18px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100vw - 32px)}
+.toast.click{cursor:pointer}
 
 /* clarifying questions */
 .clar{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px 16px;margin-top:4px}
@@ -330,12 +353,14 @@ input,textarea{font:inherit;color:inherit}
       <span class="badge" id="planBadge">مجاني</span>
       <button class="btn ghost" id="histBtn" title="المحادثات القديمة">🕘 <span class="hide-sm">المحادثات</span></button>
       <button class="btn ghost" id="docsBtn">📄 <span class="hide-sm">المستندات</span></button>
+      <button class="btn ghost bell" id="bellBtn" title="الإشعارات">🔔<span class="cnt hidden" id="bellCnt"></span></button>
       <button class="btn ghost" id="newBtn" title="محادثة جديدة">＋ <span class="hide-sm">جديدة</span></button>
       <button class="avatar" id="avatar"></button>
     </div>
+    <div class="npanel hidden" id="npanel"></div>
     <div class="menu hidden" id="menu">
       <div class="who"><b id="mName"></b><span id="mEmail" style="color:var(--mute)"></span></div>
-      <button id="adminMenu" class="hidden">📊 لوحة التحكم</button>
+      <button id="adminMenu" class="hidden">📊 لوحة التحكم <span id="admMenuIssues" class="err"></span></button>
       <button id="upgradeMenu">✦ الترقية لـ Pro</button>
       <button id="logoutBtn">تسجيل خروج</button>
     </div>
@@ -394,6 +419,7 @@ input,textarea{font:inherit;color:inherit}
   <nav class="adm-tabs" id="admTabs">
     <button class="on" data-t="ov">نظرة عامة</button>
     <button data-t="us">المستخدمين</button>
+    <button data-t="is">⚠️ المشاكل <span id="admTabIssues" class="err"></span></button>
     <button data-t="pl">الباقات والحدود</button>
   </nav>
   <div class="adm-body"><div class="adm-wrap">
@@ -405,6 +431,10 @@ input,textarea{font:inherit;color:inherit}
       </div>
       <div class="utool" id="uFilters"></div>
       <div id="uList"></div>
+    </div>
+    <div id="admIs" class="hidden">
+      <div class="utool" id="isFilters"></div>
+      <div id="isList"></div>
     </div>
     <div id="admPl" class="hidden"></div>
   </div></div>
@@ -494,7 +524,7 @@ $('authForm').onsubmit = async e => {
   try {
     const r = await api(mode, { email: $('email').value, password: $('password').value, name: $('name').value });
     if (!r.ok) throw new Error(r.error || 'حصل خطأ');
-    token = r.token; store.set(token); applyMe(r); showApp();
+    token = r.token; store.set(token); applyMe(r); showApp(); startPolling();
   } catch (err) { $('authErr').textContent = err.message === 'Failed to fetch' ? 'مش قادر أوصل للسيرفر' : err.message; $('authErr').classList.remove('hidden'); }
   $('authBtn').disabled = false;
 };
@@ -609,6 +639,8 @@ async function send(opts = {}) {
       if (typeof data.remaining === 'number' && me) setUsage(me.usage.limit - data.remaining, me.usage.limit);
       return;
     }
+    const failed = data.ok !== false && /^معلش/.test(String(data.output || ''));
+    if (failed) { renderFailure(bot, 'chat'); return; }
     body.innerHTML = md(data.output || 'مفيش رد.');
     if (data.error === 'quota') { body.classList.add('err'); }
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
@@ -693,6 +725,7 @@ $('admRefresh').onclick = () => admLoad();
 $('admTabs').querySelectorAll('button').forEach(b => b.onclick = () => {
   adm.tab = b.dataset.t; $('admTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   $('admOv').classList.toggle('hidden', adm.tab !== 'ov'); $('admUs').classList.toggle('hidden', adm.tab !== 'us'); $('admPl').classList.toggle('hidden', adm.tab !== 'pl');
+  $('admIs').classList.toggle('hidden', adm.tab !== 'is'); if (adm.tab === 'is') loadIssues();
 });
 async function admLoad() {
   $('admOv').innerHTML = '<div class="typing"><span class="dots"><i></i><i></i><i></i></span>بيحمّل</div>';
@@ -720,6 +753,7 @@ function renderOverview(o) {
     tile('توكنز النهارده (تقديري)', fmt(a.tokens_est_today), 'كل الموديلات') +
     tile('تقييمات آخر 7 أيام', '👍 ' + fmt(a.likes_7d) + '&nbsp; 👎 ' + fmt(a.dislikes_7d), '') +
     tile('البحث في القوانين', o.search.gemini_ok ? 'بالمعنى ✓' : 'بالكلمات', o.search.gemini_ok ? 'Gemini شغال' : 'Gemini واقف لحد ' + new Date(o.search.down_until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (kwShare ? ' · ' + kwShare + '% من ردود النهارده' : ''), !o.search.gemini_ok) +
+    '<div class="tile' + (a.open_issues ? ' warn' : '') + '" id="tileIssues" style="cursor:pointer"><div class="k">⚠️ مشاكل مفتوحة</div><div class="v">' + fmt(a.open_issues) + '</div><div class="s">مستخدمين ردودهم فشلت · دوس للتفاصيل</div></div>' +
     tile('أسئلة قيّمتها', '👍 ' + fmt(a.good_questions) + '&nbsp; 👎 ' + fmt(a.bad_questions), 'من صفحة كل مستخدم') +
     tile('مستخدمين جداد', fmt(us.new_today), fmt(us.new_7d) + ' في آخر 7 أيام') +
     '</div>';
@@ -736,6 +770,7 @@ function renderOverview(o) {
     '</div></div></div>';
   h += llmPanel(o.llm || []);
   $('admOv').innerHTML = h;
+  const ti = $('tileIssues'); if (ti) ti.onclick = () => openAdminTab('is');
   $('admOv').querySelectorAll('[data-id]').forEach(el => el.onclick = () => openUser(adm.users.find(u => u.id === el.dataset.id)));
   barChart($('admChart'), o.series || []);
 }
@@ -1066,6 +1101,7 @@ async function sendMap(text, type) {
     if (d.error === 'unauthorized') { store.clear(); token = null; showAuth(); return; }
     if (typeof d.maps_left === 'number') setMaps(type, d.maps_left);
     if (!d.ok || !d.map) {
+      if (d.error === 'failed') { renderFailure(bot, 'map'); return; }
       body.innerHTML = md(d.output || 'مقدرتش أعمل الخريطة.'); body.classList.add('err');
       if (d.error === 'quota' && me && me.user.plan === 'free') { const b = document.createElement('button'); b.className = 'btn ghost'; b.style.marginTop = '8px'; b.textContent = '✦ اعرف عن Pro'; b.onclick = openPro; body.appendChild(b); }
       return;
@@ -1244,10 +1280,146 @@ function svgToPng(svg, name) {
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText(svg));
 }
 
+
+/* ---------- failed answers: the user is told the admin was alerted ---------- */
+function renderFailure(bot, kind) {
+  const body = bot.querySelector('.md');
+  body.innerHTML = '<div class="failbox"><p><b>حصلت مشكلة ومقدرتش أجهز ' + (kind === 'map' ? 'الخريطة' : 'الرد') + ' دلوقتي.</b></p>' +
+    '<p>اتبلغ فريق الدعم تلقائيًا، وأول ما المشكلة تتحل هيوصلك ' + (kind === 'map' ? 'الخريطة' : 'الرد') + ' في نفس المحادثة دي ومعاه إشعار 🔔.</p>' +
+    '<button class="btn ghost" data-a="notify">🔔 بلغني على الموبايل</button></div>';
+  const b = body.querySelector('[data-a="notify"]');
+  if (!('Notification' in window) || Notification.permission === 'granted') b.remove();
+  else b.onclick = async () => { try { const p = await Notification.requestPermission(); b.textContent = p === 'granted' ? '✓ هنبلغك' : 'الإشعارات مقفولة في المتصفح'; } catch (e) {} };
+}
+
+/* ---------- user notifications (answers that arrived after a resend) ---------- */
+const notif = { last: 0, items: [], timer: null };
+try { notif.last = +localStorage.getItem('sl_notif_last') || 0; } catch (e) {}
+$('bellBtn').onclick = e => { e.stopPropagation(); $('npanel').classList.toggle('hidden'); if (!$('npanel').classList.contains('hidden')) renderNotifs(); };
+document.addEventListener('click', e => { if (!$('npanel').contains(e.target)) $('npanel').classList.add('hidden'); });
+async function pollNotifs() {
+  if (!token) return;
+  try {
+    const r = await api('notifications'); if (!r.ok) return;
+    notif.items = r.items || [];
+    $('bellCnt').textContent = r.unread > 9 ? '9+' : r.unread; $('bellCnt').classList.toggle('hidden', !r.unread);
+    const fresh = notif.items.filter(n => !n.read && n.id > notif.last);
+    if (fresh.length) {
+      notif.last = Math.max(...fresh.map(n => n.id)); try { localStorage.setItem('sl_notif_last', notif.last); } catch (e) {}
+      const n = fresh[0];
+      toastClick('🔔 ' + n.title + ': ' + (n.body || ''), () => openNotif(n));
+      try { if ('Notification' in window && Notification.permission === 'granted' && document.hidden) { const sn = new Notification(n.title, { body: n.body || '', tag: 'sl-' + n.id }); sn.onclick = () => { window.focus(); openNotif(n); }; } } catch (e) {}
+      if (fresh.some(x => x.session === session)) openSession(session);   // the open chat got its answer: reload it
+    }
+  } catch (e) {}
+}
+function renderNotifs() {
+  const box = $('npanel');
+  box.innerHTML = notif.items.length ? '' : '<div class="muted" style="padding:10px">مفيش إشعارات.</div>';
+  notif.items.forEach(n => {
+    const el = document.createElement('div'); el.className = 'ni' + (n.read ? '' : ' unread');
+    el.innerHTML = '<b></b><small></small>'; el.querySelector('b').textContent = n.title;
+    el.querySelector('small').textContent = (n.body || '') + ' · ' + ago(n.at);
+    el.onclick = () => openNotif(n); box.appendChild(el);
+  });
+  if (notif.items.some(n => !n.read)) { const a = document.createElement('button'); a.className = 'linkbtn'; a.textContent = 'علّم الكل كمقروء'; a.onclick = async e => { e.stopPropagation(); await api('notifications_read', { all: true }); pollNotifs().then(renderNotifs); }; box.appendChild(a); }
+}
+async function openNotif(n) {
+  $('npanel').classList.add('hidden');
+  try { await api('notifications_read', { ids: [n.id] }); } catch (e) {}
+  if (n.session) { $('adminView').classList.add('hidden'); await openSession(n.session); }
+  pollNotifs();
+}
+function toastClick(t, fn) { const d = document.createElement('div'); d.className = 'toast click'; d.textContent = t; d.onclick = () => { d.remove(); fn(); }; document.body.appendChild(d); setTimeout(() => d.remove(), 7000); }
+
+/* ---------- admin: alerts + issues tab with resend ---------- */
+const iss = { status: 'open', seen: 0, list: [] };
+try { iss.seen = +localStorage.getItem('sl_issue_seen') || 0; } catch (e) {}
+function openAdminTab(t) { $('adminView').classList.remove('hidden'); const b = $('admTabs').querySelector('[data-t="' + t + '"]'); if (b) b.click(); }
+async function pollIssues() {
+  if (!me || me.user.role !== 'admin') return;
+  try {
+    const r = await api('admin_issues', { status: 'open' }); if (!r.ok) return;
+    const open = r.issues || [], n = open.length;
+    $('admMenuIssues').textContent = n ? '(⚠️ ' + n + ')' : ''; $('admTabIssues').textContent = n ? '(' + n + ')' : '';
+    let dot = $('avatar').querySelector('.cnt');
+    if (n && !dot) { dot = document.createElement('span'); dot.className = 'cnt'; $('avatar').appendChild(dot); }
+    if (dot) { dot.textContent = n; dot.classList.toggle('hidden', !n); }
+    const fresh = open.filter(i => i.id > iss.seen && i.status === 'open');
+    if (fresh.length) {
+      iss.seen = Math.max(...open.map(i => i.id)); try { localStorage.setItem('sl_issue_seen', iss.seen); } catch (e) {}
+      const i = fresh[0];
+      toastClick('⚠️ ' + (i.name || 'مستخدم') + ' عنده مشكلة' + (fresh.length > 1 ? ' (+' + (fresh.length - 1) + ')' : '') + ' · دوس للتفاصيل', () => { $('adminView').classList.remove('hidden'); admLoad(); openAdminTab('is'); });
+    }
+  } catch (e) {}
+}
+const IS_FILTERS = [['open', 'مفتوحة'], ['resolved', 'اتحلت'], ['dismissed', 'متجاهلة'], ['all', 'الكل']];
+const KIND_LABEL = { free: 'رد مجاني', pro: 'رد Pro', mindmap: 'خريطة ذهنية', timeline: 'خط زمني' };
+const ST_LABEL = { open: '<span class="badge off">مفتوحة</span>', retrying: '<span class="badge pro">بيتعاد إرسالها…</span>', resolved: '<span class="badge admin">اتحلت ✓</span>', dismissed: '<span class="badge">متجاهلة</span>' };
+async function loadIssues() {
+  $('isFilters').innerHTML = IS_FILTERS.map(([k, t]) => '<button class="fchip' + (iss.status === k ? ' on' : '') + '" data-s="' + k + '">' + t + '</button>').join('');
+  $('isFilters').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { iss.status = b.dataset.s; loadIssues(); });
+  $('isList').innerHTML = '<div class="muted">بيحمّل...</div>';
+  try {
+    const r = await api('admin_issues', { status: iss.status }); if (!r.ok) throw new Error(r.error);
+    iss.list = r.issues || [];
+    $('isList').innerHTML = iss.list.length ? '' : '<div class="panel" style="margin-top:0"><div class="muted">' + (iss.status === 'open' ? 'مفيش مشاكل مفتوحة 🎉' : 'مفيش حاجة هنا.') + '</div></div>';
+    iss.list.forEach(i => $('isList').appendChild(issueCard(i)));
+  } catch (e) { $('isList').innerHTML = '<div class="alert">مقدرتش أحمّل المشاكل: ' + esc(e.message) + '</div>'; }
+}
+function issueCard(i) {
+  const el = document.createElement('div'); el.className = 'issue st-' + i.status;
+  const n8n = i.exec_id ? 'https://joe03.app.n8n.cloud/workflow/Urs8CLRcjtJbkZ8G/executions/' + encodeURIComponent(i.exec_id) : '';
+  el.innerHTML = '<div class="ih"><b></b><span class="muted" dir="ltr"></span>' + (ST_LABEL[i.status] || '') + '<span class="badge">' + (KIND_LABEL[i.kind] || esc(i.kind)) + '</span>' +
+    (i.attempts > 1 ? '<span class="muted">فشل ' + fmt(i.attempts) + ' مرات</span>' : '') + '<span class="muted">· ' + ago(i.updated_at) + '</span></div>' +
+    '<div class="iq"></div><div class="ie"></div>' + (i.answer ? '<div class="ires"><b>الرد اللي وصله:</b> <span></span></div>' : '') +
+    '<div class="ia">' + (['open', 'retrying'].includes(i.status) ? '<button class="btn" data-a="retry">🔁 إعادة إرسال</button><button class="btn ghost" data-a="resolved">✓ اتحلت</button><button class="btn ghost" data-a="dismissed">تجاهل</button>' : '<button class="btn ghost" data-a="open">إعادة فتح</button>') +
+    '<button class="btn ghost" data-a="copy">📋 نسخ التفاصيل لـ Claude</button>' + (n8n ? '<a class="linkbtn" target="_blank" rel="noopener" href="' + esc(n8n) + '">التشغيل في n8n ↗</a>' : '') +
+    '<button class="linkbtn" data-a="chat">افتح شات المستخدم</button></div><div class="ires" data-r></div>';
+  el.querySelector('.ih b').textContent = i.name || '(بدون اسم)'; el.querySelector('.ih .muted').textContent = i.email || '';
+  el.querySelector('.iq').textContent = i.question || '(من غير نص)'; el.querySelector('.ie').textContent = i.error || '';
+  if (i.answer) el.querySelector('.ires span').textContent = i.answer.slice(0, 300) + (i.answer.length > 300 ? '…' : '');
+  const res = el.querySelector('[data-r]');
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    const a = b.dataset.a;
+    if (a === 'copy') {
+      const t = 'مشكلة عند مستخدم في مستشارك القانوني\nالمستخدم: ' + (i.name || '') + ' <' + (i.email || '') + '>\nالنوع: ' + (KIND_LABEL[i.kind] || i.kind) + '\nالوقت: ' + new Date(i.created_at).toLocaleString('en-GB') +
+        '\nعدد مرات الفشل: ' + i.attempts + '\nالسؤال: ' + (i.question || '') + '\nالخطأ: ' + (i.error || '') + '\nn8n execution: ' + (i.exec_id || '-') + (n8n ? ' (' + n8n + ')' : '') + '\nissue id: ' + i.id;
+      try { await navigator.clipboard.writeText(t); b.textContent = '✓ اتنسخ: ابعته لـ Claude'; } catch (e) { res.textContent = t; }
+      return;
+    }
+    if (a === 'chat') { const u = adm.users.find(x => x.id === i.user_id); if (u) { openUser(u); } return; }
+    if (a === 'retry') return retryIssue(i, el, res);
+    const r = await api('admin_issue_set', { id: i.id, status: a });
+    if (r.ok) { toast('✓ اتحدّثت'); loadIssues(); pollIssues(); } else toast('✕ ' + (r.error || 'حصل خطأ'));
+  });
+  return el;
+}
+async function retryIssue(i, el, res) {
+  el.querySelectorAll('.ia .btn').forEach(b => b.disabled = true);
+  res.innerHTML = '<span class="typing"><span class="dots"><i></i><i></i><i></i></span>بيعيد إرسال ' + (KIND_LABEL[i.kind] || 'الطلب') + ' باسم المستخدم...</span>';
+  try {
+    const t = await api('admin_issue_retry', { id: i.id }); if (!t.ok) throw new Error(t.error);
+    const isMap = i.kind === 'mindmap' || i.kind === 'timeline';
+    const body = isMap ? { token: t.token, sessionId: t.session, text: t.question === '(من المحادثة)' ? '' : t.question, type: i.kind, retryOf: i.id }
+                       : { token: t.token, sessionId: t.session, chatInput: t.question, noClarify: true, retryOf: i.id };
+    const r = await fetch(API.base + (isMap ? '/mindmap' : '/Chat'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let d = await r.json(); if (Array.isArray(d)) d = d[0];
+    const ok = isMap ? d.ok : d.ok && !/^معلش/.test(String(d.output || ''));
+    res.innerHTML = ok ? '<b style="color:var(--brand)">✓ الرد وصل للمستخدم في نفس الشات واتبعتله إشعار.</b>' : '<b class="err">✕ لسه فيه مشكلة. انسخ التفاصيل وابعتها لـ Claude.</b>';
+    setTimeout(() => { loadIssues(); pollIssues(); }, ok ? 1500 : 800);
+  } catch (e) { res.innerHTML = '<span class="err">✕ ' + esc(e.message) + '</span>'; el.querySelectorAll('.ia .btn').forEach(b => b.disabled = false); }
+}
+function startPolling() {
+  pollNotifs(); pollIssues();
+  clearInterval(notif.timer); notif.timer = setInterval(() => { if (!document.hidden) { pollNotifs(); pollIssues(); } }, 45000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && token) { pollNotifs(); pollIssues(); } });
+
 /* ---------- boot ---------- */
 (async () => {
   if (!token) { setMode('login'); showAuth(); return; }
-  try { const r = await api('me'); if (r.ok) { applyMe(r); showApp(); return; } } catch (e) {}
+  try { const r = await api('me'); if (r.ok) { applyMe(r); showApp(); startPolling(); return; } } catch (e) {}
   store.clear(); token = null; setMode('login'); showAuth();
 })();
 </script>
